@@ -1641,25 +1641,6 @@ async function deleteBlogPost(id) {
     }
 }
 
-async function deletePaket(id) {
-    // Cek apakah paket ini sedang digunakan oleh pelanggan
-    const isUsed = allCustomers.some(c => c.paketId === id);
-    if (isUsed) {
-        showToast("Tidak bisa menghapus paket yang sedang digunakan oleh pelanggan.", "error");
-        // Kembalikan baris jika dihapus karena undo
-        const row = document.getElementById(`paket-row-${id}`);
-        if (row) row.style.display = '';
-        return; // Hentikan proses penghapusan
-    }
-    try {
-        await deleteDoc(doc(db, dataContainerPath, 'packages', id));
-        // Tidak perlu toast di sini karena akan ditangani oleh Undo Toast di event listener
-    } catch (e) {
-        console.error("Error deleting package:", e);
-        showToast("Gagal menghapus paket.", "error");
-    }
-}
-
 // --- Fungsi Generate Tagihan ---
 async function generateInvoices(periode, useProrate = false) {
     showToast("Memulai proses generate tagihan...", "info");
