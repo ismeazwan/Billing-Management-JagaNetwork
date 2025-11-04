@@ -520,25 +520,7 @@ function renderPackages() {
     lucide.createIcons();
 }
 
-// Contoh deletePaket
-async function deletePaket(id) {
-    const isUsed = allCustomers.some(c => c.paketId === id);
-    if (isUsed) {
-        showToast("Tidak bisa menghapus paket yang sedang digunakan oleh pelanggan.", "error");
-        const row = document.getElementById(`paket-row-${id}`);
-        if (row) row.style.display = '';
-        return;
-    }
-    try {
-        await deleteDoc(doc(db, dataContainerPath, 'packages', id));
-    } catch (e) {
-        console.error("Error deleting package:", e);
-        showToast("Gagal menghapus paket.", "error");
-    }
-}
-
 // ... (Tambahkan fungsi-fungsi lainnya di sini) ...
-
 // --- 6. Inisialisasi Aplikasi ---
 // Gunakan DOMContentLoaded untuk memastikan DOM siap sebelum mengakses elemen
 document.addEventListener('DOMContentLoaded', () => {
