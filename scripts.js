@@ -520,24 +520,6 @@ function renderPackages() {
     lucide.createIcons();
 }
 
-// Contoh savePaket
-async function savePaket(paketData) {
-    try {
-        const collectionRef = getCollectionRef('packages');
-        if (paketData.id) {
-            await updateDoc(doc(db, dataContainerPath, 'packages', paketData.id), paketData);
-            showToast("Data paket berhasil diperbarui.");
-        } else {
-            await addDoc(collectionRef, paketData);
-            showToast("Paket baru berhasil ditambahkan.");
-        }
-        closeModal(document.getElementById('modal-paket'));
-    } catch (error) {
-        console.error("Error saving package:", error);
-        showToast("Gagal menyimpan data paket.", "error");
-    }
-}
-
 // Contoh deletePaket
 async function deletePaket(id) {
     const isUsed = allCustomers.some(c => c.paketId === id);
