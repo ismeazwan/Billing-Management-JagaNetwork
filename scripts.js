@@ -111,7 +111,7 @@ async function saveCustomer(customerData) {
 async function deleteCustomer(id) {
     try {
         await deleteDoc(doc(db, dataContainerPath, 'customers', id));
-        // Tidak perlu toast di sini karena akan ditangani oleh Undo Toast
+        // Tidak perlu toast di sini karena akan ditangani oleh Undo Toast di event listener
     } catch (e) {
         console.error("Error deleting customer:", e);
         showToast("Gagal menghapus pelanggan.", "error");
@@ -364,7 +364,7 @@ async function loadData() {
     unsubscribeInvoices = onSnapshot(qInvoices, (snapshot) => {
         allInvoices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         updateDashboard();
-        renderInvoices();
+        renderInvoices(); // Panggil fungsi renderInvoices
         renderLaporan();
         calculateAnalytics({ customers: allCustomers, packages: allPackages, invoices: allInvoices, expenses: allExpenses });
         if (analyticsInitialized) prepareChartData({ customers: allCustomers, packages: allPackages, invoices: allInvoices, expenses: allExpenses });
@@ -374,7 +374,7 @@ async function loadData() {
     unsubscribeExpenses = onSnapshot(qExpenses, (snapshot) => {
         allExpenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         updateDashboard();
-        renderExpenses();
+        renderExpenses(); // Panggil fungsi renderExpenses
         renderLaporan();
         calculateAnalytics({ customers: allCustomers, packages: allPackages, invoices: allInvoices, expenses: allExpenses });
         if (analyticsInitialized) prepareChartData({ customers: allCustomers, packages: allPackages, invoices: allInvoices, expenses: allExpenses });
@@ -383,16 +383,16 @@ async function loadData() {
     const qNetworkStatus = query(getCollectionRef('network_status'), orderBy('timestamp', 'desc'));
     unsubscribeNetworkStatus = onSnapshot(qNetworkStatus, (snapshot) => {
         allNetworkStatus = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        renderNetworkStatus();
+        renderNetworkStatus(); // Panggil fungsi renderNetworkStatus
     });
 
     const qBlogPosts = query(getCollectionRef('articles'), orderBy('createdAt', 'desc'));
     unsubscribeBlogPosts = onSnapshot(qBlogPosts, (snapshot) => {
         allBlogPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        renderBlogPosts();
+        renderBlogPosts(); // Panggil fungsi renderBlogPosts
     });
 
-    loadCalendarEvents();
+    loadCalendarEventsForWidget(); // Ganti dengan fungsi yang benar
 }
 
 function cleanupSubscriptions() {
@@ -415,8 +415,13 @@ function cleanupSubscriptions() {
 // Fungsi Update Dashboard
 function updateDashboard() {
     const activeCustomers = allCustomers.filter(c => c.status === 'Aktif');
-    document.getElementById('kpi-total-customers').textContent = activeCustomers.length;
-    document.getElementById('kpi-pending-invoices').textContent = allInvoices.filter(inv => inv.status === 'belum lunas').length;
+    // Gunakan pengecekan null sebelum mengakses elemen
+    const kpiTotalCustomersEl = document.getElementById('kpi-total-customers');
+    if (kpiTotalCustomersEl) kpiTotalCustomersEl.textContent = activeCustomers.length;
+
+    const pendingInvoices = allInvoices.filter(inv => inv.status === 'belum lunas').length;
+    const kpiPendingInvoicesEl = document.getElementById('kpi-pending-invoices');
+    if (kpiPendingInvoicesEl) kpiPendingInvoicesEl.textContent = pendingInvoices;
 
     const today = new Date();
     const currentMonth = today.getMonth();
@@ -425,8 +430,13 @@ function updateDashboard() {
         const invDate = new Date(inv.periode);
         return invDate.getMonth() === currentMonth && invDate.getFullYear() === currentYear;
     });
-    document.getElementById('kpi-current-month-invoices').textContent = formatRupiah(currentMonthInvoices.reduce((sum, inv) => sum + inv.jumlah, 0));
-    document.getElementById('kpi-current-month-revenue').textContent = formatRupiah(currentMonthInvoices.filter(inv => inv.status === 'lunas').reduce((sum, inv) => sum + inv.jumlah, 0));
+    const totalInvoicesThisMonth = currentMonthInvoices.reduce((sum, inv) => sum + inv.jumlah, 0);
+    const kpiCurrentMonthInvoicesEl = document.getElementById('kpi-current-month-invoices');
+    if (kpiCurrentMonthInvoicesEl) kpiCurrentMonthInvoicesEl.textContent = formatRupiah(totalInvoicesThisMonth);
+
+    const revenueThisMonth = currentMonthInvoices.filter(inv => inv.status === 'lunas').reduce((sum, inv) => sum + inv.jumlah, 0);
+    const kpiCurrentMonthRevenueEl = document.getElementById('kpi-current-month-revenue');
+    if (kpiCurrentMonthRevenueEl) kpiCurrentMonthRevenueEl.textContent = formatRupiah(revenueThisMonth);
 }
 
 // Fungsi Render Laporan
@@ -449,9 +459,15 @@ function renderLaporan() {
     const totalExpenses = filteredExpenses.reduce((sum, e) => sum + e.jumlah, 0);
     const profit = totalRevenue - totalExpenses;
 
-    document.getElementById('kpi-report-revenue').textContent = formatRupiah(totalRevenue);
-    document.getElementById('kpi-report-expenses').textContent = formatRupiah(totalExpenses);
-    document.getElementById('kpi-report-profit').textContent = formatRupiah(profit);
+    // Gunakan pengecekan null sebelum mengakses elemen
+    const kpiReportRevenueEl = document.getElementById('kpi-report-revenue');
+    if (kpiReportRevenueEl) kpiReportRevenueEl.textContent = formatRupiah(totalRevenue);
+
+    const kpiReportExpensesEl = document.getElementById('kpi-report-expenses');
+    if (kpiReportExpensesEl) kpiReportExpensesEl.textContent = formatRupiah(totalExpenses);
+
+    const kpiReportProfitEl = document.getElementById('kpi-report-profit');
+    if (kpiReportProfitEl) kpiReportProfitEl.textContent = formatRupiah(profit);
 
     const pemasukanTbody = document.getElementById('laporan-pemasukan-table-body');
     if (filteredInvoices.length === 0) {
@@ -520,7 +536,521 @@ function renderPackages() {
     lucide.createIcons();
 }
 
+// Contoh savePaket
+async function savePaket(paketData) {
+    try {
+        const collectionRef = getCollectionRef('packages');
+        if (paketData.id) {
+            await updateDoc(doc(db, dataContainerPath, 'packages', paketData.id), paketData);
+            showToast("Data paket berhasil diperbarui.");
+        } else {
+            await addDoc(collectionRef, paketData);
+            showToast("Paket baru berhasil ditambahkan.");
+        }
+        closeModal(document.getElementById('modal-paket'));
+    } catch (error) {
+        console.error("Error saving package:", error);
+        showToast("Gagal menyimpan data paket.", "error");
+    }
+}
+
+// Contoh deletePaket
+async function deletePaket(id) {
+    const isUsed = allCustomers.some(c => c.paketId === id);
+    if (isUsed) {
+        showToast("Tidak bisa menghapus paket yang sedang digunakan oleh pelanggan.", "error");
+        const row = document.getElementById(`paket-row-${id}`);
+        if (row) row.style.display = '';
+        return;
+    }
+    try {
+        await deleteDoc(doc(db, dataContainerPath, 'packages', id));
+    } catch (e) {
+        console.error("Error deleting package:", e);
+        showToast("Gagal menghapus paket.", "error");
+    }
+}
+
+// --- Fungsi Render Lainnya (Ditambahkan untuk memperbaiki error) ---
+
+// Contoh renderInvoices (pastikan ID tbody sesuai dengan index.html Anda)
+function renderInvoices() {
+    const tbody = document.getElementById('tagihan-table-body'); // Ganti dengan ID yang benar dari index.html
+    if (!tbody) {
+        console.warn("Element tbody untuk tagihan tidak ditemukan saat renderInvoices.");
+        return;
+    }
+    if (!allInvoices.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-500">Tidak ada tagihan.</td></tr>`; // Sesuaikan colspan
+        return;
+    }
+
+    // Logika filter dan pagination bisa diterapkan di sini seperti renderCustomers
+    tbody.innerHTML = allInvoices.map(inv => {
+        const customer = allCustomers.find(c => c.id === inv.pelangganId) || { nama: 'N/A' };
+        const statusClass = inv.status === 'lunas' ? 'bg-green-100 text-green-800' :
+                           inv.status === 'belum lunas' ? 'bg-red-100 text-red-800' :
+                           'bg-yellow-100 text-yellow-800';
+        return `
+        <tr class="border-b hover:bg-gray-50 transition-all duration-300" id="invoice-row-${inv.id}">
+            <td class="p-4">${customer.nama}</td>
+            <td class="p-4">${inv.periode}</td>
+            <td class="p-4">${formatRupiah(inv.jumlah)}</td>
+            <td class="p-4">
+                <span class="px-2 py-1 text-xs font-medium rounded-full ${statusClass}">${inv.status}</span>
+            </td>
+            <td class="p-4 flex gap-3">
+                <button class="btn-edit-tagihan text-blue-600 hover:text-blue-800" data-id="${inv.id}" title="Edit">
+                    <i data-lucide="edit" class="w-5 h-5"></i>
+                </button>
+                <button class="btn-delete-tagihan text-red-600 hover:text-red-800" data-id="${inv.id}" title="Hapus">
+                    <i data-lucide="trash-2" class="w-5 h-5"></i>
+                </button>
+            </td>
+        </tr>
+        `;
+    }).join('');
+    lucide.createIcons(); // Refresh ikon setelah render
+}
+
+// Contoh renderExpenses (pastikan ID tbody sesuai dengan index.html Anda)
+function renderExpenses() {
+    const tbody = document.getElementById('pengeluaran-table-body'); // Ganti dengan ID yang benar dari index.html
+    if (!tbody) {
+        console.warn("Element tbody untuk pengeluaran tidak ditemukan saat renderExpenses.");
+        return;
+    }
+    if (!allExpenses.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-500">Tidak ada pengeluaran.</td></tr>`; // Sesuaikan colspan
+        return;
+    }
+    tbody.innerHTML = allExpenses.map(e => {
+        const statusClass = e.kategori === 'tagihan' ? 'bg-blue-100 text-blue-800' :
+                           e.kategori === 'maintenance' ? 'bg-orange-100 text-orange-800' :
+                           e.kategori === 'janji-temu' ? 'bg-green-100 text-green-800' :
+                           'bg-gray-100 text-gray-800';
+        return `
+        <tr class="border-b hover:bg-gray-50 transition-all duration-300" id="expense-row-${e.id}">
+            <td class="p-4">${e.tanggal}</td>
+            <td class="p-4">
+                <span class="px-2 py-1 text-xs font-medium rounded-full ${statusClass}">${e.kategori}</span>
+            </td>
+            <td class="p-4">${e.deskripsi}</td>
+            <td class="p-4">${formatRupiah(e.jumlah)}</td>
+            <td class="p-4 flex gap-3">
+                <button class="btn-edit-pengeluaran text-blue-600 hover:text-blue-800" data-id="${e.id}" title="Edit">
+                    <i data-lucide="edit" class="w-5 h-5"></i>
+                </button>
+                <button class="btn-delete-pengeluaran text-red-600 hover:text-red-800" data-id="${e.id}" title="Hapus">
+                    <i data-lucide="trash-2" class="w-5 h-5"></i>
+                </button>
+            </td>
+        </tr>
+        `;
+    }).join('');
+    lucide.createIcons();
+}
+
+// Contoh renderNetworkStatus (pastikan ID tbody sesuai dengan index.html Anda)
+function renderNetworkStatus() {
+    const tbody = document.getElementById('status-jaringan-table-body'); // Ganti dengan ID yang benar dari index.html
+    if (!tbody) {
+        console.warn("Element tbody untuk status jaringan tidak ditemukan saat renderNetworkStatus.");
+        return;
+    }
+    if (!allNetworkStatus.length) {
+        tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-gray-500">Tidak ada status jaringan.</td></tr>`; // Sesuaikan colspan
+        return;
+    }
+    tbody.innerHTML = allNetworkStatus.map(s => {
+        const statusClasses = {
+            'Normal': 'bg-green-100 text-green-800',
+            'Gangguan Sebagian': 'bg-yellow-100 text-yellow-800',
+            'Gangguan Umum': 'bg-red-100 text-red-800',
+            'Tidak Diketahui': 'bg-gray-100 text-gray-800'
+        };
+        const timestamp = s.timestamp?.toDate ? s.timestamp.toDate().toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : 'N/A';
+        return `
+        <tr class="border-b hover:bg-gray-50 transition-all duration-300" id="status-row-${s.id}">
+            <td class="p-4">${timestamp}</td>
+            <td class="p-4">
+                <span class="px-2 py-1 text-xs font-medium rounded-full ${statusClasses[s.status] || statusClasses['Tidak Diketahui']}">${s.status}</span>
+            </td>
+            <td class="p-4">${s.description}</td>
+            <td class="p-4 flex gap-3">
+                <button class="btn-edit-status-jaringan text-blue-600 hover:text-blue-800" data-id="${s.id}" title="Edit">
+                    <i data-lucide="edit" class="w-5 h-5"></i>
+                </button>
+                <button class="btn-delete-status-jaringan text-red-600 hover:text-red-800" data-id="${s.id}" title="Hapus">
+                    <i data-lucide="trash-2" class="w-5 h-5"></i>
+                </button>
+            </td>
+        </tr>
+        `;
+    }).join('');
+    lucide.createIcons();
+}
+
+// Contoh renderBlogPosts (pastikan ID tbody sesuai dengan index.html Anda)
+function renderBlogPosts() {
+    const tbody = document.getElementById('artikel-table-body'); // Ganti dengan ID yang benar dari index.html
+    if (!tbody) {
+        console.warn("Element tbody untuk artikel tidak ditemukan saat renderBlogPosts.");
+        return;
+    }
+    if (!allBlogPosts.length) {
+        tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-gray-500">Tidak ada artikel.</td></tr>`; // Sesuaikan colspan
+        return;
+    }
+    tbody.innerHTML = allBlogPosts.map(p => {
+        const date = p.createdAt?.toDate ? p.createdAt.toDate().toLocaleDateString('id-ID') : 'N/A';
+        return `
+        <tr class="border-b hover:bg-gray-50 transition-all duration-300" id="blog-row-${p.id}">
+            <td class="p-4">${p.title}</td>
+            <td class="p-4">${p.author}</td>
+            <td class="p-4">${date}</td>
+            <td class="p-4 flex gap-3">
+                <button class="btn-edit-artikel text-blue-600 hover:text-blue-800" data-id="${p.id}" title="Edit">
+                    <i data-lucide="edit" class="w-5 h-5"></i>
+                </button>
+                <button class="btn-delete-artikel text-red-600 hover:text-red-800" data-id="${p.id}" title="Hapus">
+                    <i data-lucide="trash-2" class="w-5 h-5"></i>
+                </button>
+            </td>
+        </tr>
+        `;
+    }).join('');
+    lucide.createIcons();
+}
+
+// --- Fungsi Analytics dan Chart ---
+// Fungsi untuk menghitung metrik analytics
+function calculateAnalytics(data) {
+    const { customers, packages, invoices, expenses } = data;
+    const today = new Date();
+    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const thisMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+    // --- KPI Dashboard ---
+    // Total Pelanggan (sudah dihitung di updateDashboard)
+    // Tagihan Bulan Ini (sudah dihitung di updateDashboard)
+    // Pendapatan Bulan Ini (sudah dihitung di updateDashboard)
+    // Tagihan Belum Lunas (sudah dihitung di updateDashboard)
+
+    // --- KPI Analytics ---
+    // Pelanggan Baru Bulan Ini
+    const newCustomersThisMonth = customers.filter(c => {
+        if (!c.joinDate) return false;
+        const joinDate = new Date(c.joinDate);
+        return joinDate >= thisMonthStart && joinDate <= thisMonthEnd;
+    }).length;
+    // Gunakan pengecekan null sebelum mengakses elemen
+    const kpiNewCustomersEl = document.getElementById('kpi-new-customers');
+    if (kpiNewCustomersEl) kpiNewCustomersEl.textContent = newCustomersThisMonth;
+
+    // Pengeluaran Bulan Ini
+    const expensesThisMonth = expenses.filter(exp => {
+        if (!exp.tanggal) return false;
+        const expDate = new Date(exp.tanggal);
+        return expDate >= thisMonthStart && expDate <= thisMonthEnd;
+    });
+    const totalExpensesThisMonth = expensesThisMonth.reduce((sum, exp) => sum + exp.jumlah, 0);
+    // Gunakan pengecekan null sebelum mengakses elemen
+    const totalPengeluaranEl = document.getElementById('total-pengeluaran-dashboard');
+    if (totalPengeluaranEl) totalPengeluaranEl.textContent = formatRupiah(totalExpensesThisMonth);
+
+    // Pengeluaran Terbesar
+    const expensesByCategory = {};
+    expenses.forEach(e => {
+        expensesByCategory[e.kategori] = (expensesByCategory[e.kategori] || 0) + e.jumlah;
+    });
+    if (Object.keys(expensesByCategory).length > 0) {
+        const [topCategory] = Object.entries(expensesByCategory).sort(([,a], [,b]) => b - a)[0];
+        // Gunakan pengecekan null sebelum mengakses elemen
+        const kpiTopExpenseCategoryEl = document.getElementById('kpi-top-expense-category');
+        if (kpiTopExpenseCategoryEl) kpiTopExpenseCategoryEl.textContent = topCategory;
+    } else {
+        // Gunakan pengecekan null sebelum mengakses elemen
+        const kpiTopExpenseCategoryEl = document.getElementById('kpi-top-expense-category');
+        if (kpiTopExpenseCategoryEl) kpiTopExpenseCategoryEl.textContent = '-';
+    }
+}
+
+// Fungsi untuk menyiapkan data yang akan digunakan oleh Chart.js
+function prepareChartData(data) {
+    const { customers, packages, invoices, expenses } = data;
+
+    // Inisialisasi objek history untuk 12 bulan terakhir
+    const history = {};
+    for (let i = 11; i >= 0; i--) {
+        const d = new Date();
+        d.setMonth(d.getMonth() - i);
+        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; // Format: YYYY-MM
+        history[monthKey] = {
+            revenue: 0,
+            profit: 0, // Pendapatan - Pengeluaran
+            customers: 0,
+            expenses: 0
+        };
+    }
+
+    // Hitung pendapatan dan pelanggan per bulan
+    invoices.forEach(inv => {
+        if (!inv.periode || inv.status !== 'lunas') return; // Hanya tagihan lunas yang dihitung
+        const d = new Date(inv.periode);
+        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        if (history[monthKey]) {
+            history[monthKey].revenue += inv.jumlah;
+        }
+    });
+
+    // Hitung pengeluaran per bulan
+    expenses.forEach(e => {
+        if (!e.tanggal) return;
+        const d = new Date(e.tanggal);
+        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        if (history[monthKey]) {
+            history[monthKey].expenses += e.jumlah;
+        }
+    });
+
+    // Hitung jumlah pelanggan per bulan (jumlah pelanggan di akhir bulan)
+    const allJoinDates = [...customers].sort((a, b) => new Date(a.joinDate) - new Date(b.joinDate)).map(c => new Date(c.joinDate));
+    Object.keys(history).forEach(monthKey => {
+        const [year, month] = monthKey.split('-').map(Number);
+        const endOfMonth = new Date(year, month, 0); // Akhir bulan
+        const activeCustomersCount = allJoinDates.filter(joinDate => joinDate <= endOfMonth).length;
+        history[monthKey].customers = activeCustomersCount;
+        history[monthKey].profit = history[monthKey].revenue - history[monthKey].expenses;
+    });
+
+    // Hitung pendapatan per paket
+    const revenueByPackage = {};
+    invoices.filter(inv => inv.status === 'lunas').forEach(inv => {
+        const customer = customers.find(c => c.id === inv.pelangganId);
+        if (customer) {
+            const pkg = packages.find(p => p.id === customer.paketId);
+            if (pkg) {
+                revenueByPackage[pkg.nama] = (revenueByPackage[pkg.nama] || 0) + inv.jumlah;
+            }
+        }
+    });
+
+    // Hitung pengeluaran per kategori
+    const expensesByCategory = {};
+    expenses.forEach(e => {
+        expensesByCategory[e.kategori] = (expensesByCategory[e.kategori] || 0) + e.jumlah;
+    });
+
+    return { history, revenueByPackage, expensesByCategory };
+}
+
+// Fungsi untuk menginisialisasi dan merender chart di tab Analytics
+function renderAnalyticsCharts(chartData) {
+    // Hancurkan instance chart sebelumnya untuk mencegah memory leak
+    Object.values(analyticsCharts).forEach(chart => {
+        if (chart) chart.destroy();
+    });
+
+    const { history, revenueByPackage, expensesByCategory } = chartData;
+    const colorPalette = ['#4f46e5', '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#d946ef'];
+
+    const labels = Object.keys(history).map(k => new Date(k + '-02').toLocaleString('id-ID', { month: 'short', year: 'numeric' }));
+    const profitData = Object.values(history).map(h => h.profit);
+    const revenueData = Object.values(history).map(h => h.revenue);
+
+    // Gabungkan data profit dan revenue untuk menghitung padding skala Y
+    const allDataPoints = [...profitData, ...revenueData];
+    const dataMax = Math.max(0, ...allDataPoints);
+    const dataMin = Math.min(0, ...allDataPoints);
+    const padding = (dataMax - dataMin) * 0.1;
+    const calculatedMax = dataMax + padding;
+    const calculatedMin = dataMin - padding;
+
+    // Chart 1: Pendapatan vs Laba Kotor
+    analyticsCharts.revenueProfit = new Chart(document.getElementById('revenue-profit-chart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Pendapatan',
+                    data: revenueData,
+                    backgroundColor: '#3b82f6'
+                },
+                {
+                    label: 'Laba Kotor',
+                    data: profitData,
+                    backgroundColor: '#10b981'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { stacked: false },
+                y: {
+                    stacked: false,
+                    min: calculatedMin,
+                    max: calculatedMax
+                }
+            }
+        }
+    });
+
+    // Chart 2: Komposisi Pendapatan per Paket
+    analyticsCharts.revenueComp = new Chart(document.getElementById('revenue-composition-chart').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(revenueByPackage),
+            datasets: [{
+                label: 'Pendapatan',
+                data: Object.values(revenueByPackage),
+                backgroundColor: colorPalette
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    // Chart 3: Pertumbuhan Jumlah Pelanggan
+    analyticsCharts.customerGrowth = new Chart(document.getElementById('customer-growth-chart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Total Pelanggan',
+                data: Object.values(history).map(h => h.customers),
+                borderColor: '#4f46e5',
+                backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+
+    // Chart 4: Komposisi Pengeluaran per Kategori
+    analyticsCharts.expensesComp = new Chart(document.getElementById('expenses-composition-chart').getContext('2d'), {
+        type: 'pie',
+        data: {
+            labels: Object.keys(expensesByCategory),
+            datasets: [{
+                label: 'Pengeluaran',
+                data: Object.values(expensesByCategory),
+                backgroundColor: colorPalette.reverse() // Balikkan warna agar berbeda
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+}
+
+// Fungsi untuk menginisialisasi tab Analytics saat pertama kali dibuka
+function initAnalytics() {
+    const data = { customers: allCustomers, packages: allPackages, invoices: allInvoices, expenses: allExpenses };
+
+    // Jika data belum dimuat, tampilkan loading
+    if (data.customers.length === 0 && data.packages.length === 0) {
+        document.getElementById('loading-indicator-analytics').style.display = 'block';
+        document.getElementById('analytics-content-container').style.display = 'none';
+        return;
+    }
+
+    // Sembunyikan loading, tampilkan konten
+    document.getElementById('loading-indicator-analytics').style.display = 'none';
+    document.getElementById('analytics-content-container').style.display = 'block';
+
+    // Update tanggal di header analytics
+    document.getElementById('current-date-analytics').textContent = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    // Hitung analytics dan render chart
+    calculateAnalytics(data);
+    renderAnalyticsCharts(prepareChartData(data));
+    analyticsInitialized = true; // Tandai bahwa analytics telah diinisialisasi
+}
+
+// Fungsi Load Calendar Events (untuk widget agenda mendatang di dashboard)
+function loadCalendarEventsForWidget() { // Nama fungsi diubah agar lebih spesifik
+    const q = query(getCollectionRef('calendar_events')); // Asumsi koleksi disimpan di dataContainerPath
+
+    // Unsubscribe dari listener sebelumnya jika ada
+    if (unsubscribeCalendarEvents) unsubscribeCalendarEvents();
+
+    unsubscribeCalendarEvents = onSnapshot(q, (snapshot) => {
+        // Ambil semua data acara dari Firestore
+        const allRawEvents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Perbarui widget agenda mendatang dengan data baru
+        renderUpcomingEventsWidget(allRawEvents);
+    });
+}
+
+// Fungsi untuk merender widget agenda mendatang di dashboard
+function renderUpcomingEventsWidget(allRawEvents) {
+    const listEl = document.getElementById('upcoming-events-widget');
+    if (!listEl) return; // Jika elemen tidak ditemukan, hentikan fungsi
+
+    const now = new Date();
+    now.setHours(0, 0, 0, 0); // Set waktu ke awal hari (00:00:00) untuk perbandingan yang akurat
+
+    // Filter acara yang mulai dalam 7 hari ke depan (termasuk hari ini)
+    const sevenDaysFromNow = new Date(now);
+    sevenDaysFromNow.setDate(now.getDate() + 7);
+    const upcomingEvents = allRawEvents.filter(event => {
+        if (!event.start) return false; // Abaikan acara tanpa tanggal mulai
+        const startDate = new Date(event.start + 'T00:00:00'); // Format tanggal dari Firestore (YYYY-MM-DD)
+        return startDate >= now && startDate <= sevenDaysFromNow;
+    }).sort((a, b) => new Date(a.start) - new Date(b.start)); // Urutkan berdasarkan tanggal mulai
+
+    if (upcomingEvents.length === 0) {
+        listEl.innerHTML = `<p class="text-gray-500 text-center text-sm py-4">Tidak ada agenda.</p>`;
+        return;
+    }
+
+    // Render acara ke dalam elemen HTML
+    listEl.innerHTML = upcomingEvents.map(event => {
+        const startDate = new Date(event.start + 'T00:00:00');
+        const dayName = startDate.toLocaleDateString('id-ID', { weekday: 'short' }); // Misal: "Sen"
+        const dateFormatted = startDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }); // Misal: "1 Jan"
+        // Gunakan warna berdasarkan kategori acara, atau warna default
+        const color = categoryColors[event.category] || categoryColors['umum'];
+
+        return `
+        <div class="flex items-start gap-3 text-sm">
+            <div class="border-l-4 rounded pl-3 py-1 flex-grow" style="border-color: ${color};">
+                <p class="font-semibold text-gray-800">${event.title}</p>
+                <p class="text-xs text-gray-600">${dayName}, ${dateFormatted}</p>
+            </div>
+        </div>
+        `;
+    }).join('');
+}
+
 // ... (Tambahkan fungsi-fungsi lainnya di sini) ...
+
+// Fungsi Generate Tagihan
+// ... (Tambahkan fungsi generateInvoices di sini) ...
+
+// Fungsi Export CSV
+// ... (Tambahkan fungsi exportToCsv, exportPelangganToCsv, exportTagihanToCsv di sini) ...
+
+// Fungsi Load Calendar Events
+// ... (Tambahkan fungsi loadCalendarEvents di sini) ...
+
+// Fungsi Analytics dan Chart
+// ... (Tambahkan fungsi calculateAnalytics, prepareChartData, updateCharts, dll. di sini) ...
+
 // --- 6. Inisialisasi Aplikasi ---
 // Gunakan DOMContentLoaded untuk memastikan DOM siap sebelum mengakses elemen
 document.addEventListener('DOMContentLoaded', () => {
@@ -964,7 +1494,8 @@ function populatePaketSelect(selectId, selectedValue = null) {
     });
 }
 
-// Fungsi CRUD lainnya (saveInvoice, deleteInvoice, saveExpense, deleteExpense, dll.)
+// --- Fungsi CRUD lainnya (saveInvoice, deleteInvoice, saveExpense, deleteExpense, dll.) ---
+
 // --- Invoice ---
 async function saveInvoice(invoiceData) {
     try {
@@ -1147,7 +1678,7 @@ async function deletePaket(id) {
     }
 }
 
-// Fungsi Generate Tagihan
+// --- Fungsi Generate Tagihan ---
 async function generateInvoices(periode, useProrate = false) {
     showToast("Memulai proses generate tagihan...", "info");
     const batch = writeBatch(db);
@@ -1217,8 +1748,7 @@ async function generateInvoices(periode, useProrate = false) {
     }
 }
 
-// Fungsi Export CSV
-
+// --- Fungsi Export CSV ---
 // Fungsi umum untuk membuat file CSV
 function exportToCsv(rows, filename) {
     if (rows.length === 0) {
@@ -1325,332 +1855,347 @@ function getBillingPeriodText(inv, customer) {
     // Jika Anda memiliki logika kompleks untuk menampilkan rentang tanggal, gunakan fungsi tersebut di sini.
 }
 
+// --- Fungsi Load Calendar Events (untuk widget agenda mendatang di dashboard) ---
+// Sudah didefinisikan sebelumnya di file Anda:
+// function loadCalendarEventsForWidget() { ... }
+// function renderUpcomingEventsWidget(allRawEvents) { ... }
 
-// Fungsi Load Calendar Events (untuk widget agenda mendatang di dashboard)
-function loadCalendarEventsForWidget() { // Nama fungsi diubah agar lebih spesifik
-    const q = query(getCollectionRef('calendar_events')); // Asumsi koleksi disimpan di dataContainerPath
-
-    // Unsubscribe dari listener sebelumnya jika ada
-    if (unsubscribeCalendarEvents) unsubscribeCalendarEvents();
-
-    unsubscribeCalendarEvents = onSnapshot(q, (snapshot) => {
-        // Ambil semua data acara dari Firestore
-        const allRawEvents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        // Perbarui widget agenda mendatang dengan data baru
-        renderUpcomingEventsWidget(allRawEvents);
-    });
-}
-
-// Fungsi untuk merender widget agenda mendatang di dashboard
-function renderUpcomingEventsWidget(allRawEvents) {
-    const listEl = document.getElementById('upcoming-events-widget');
-    if (!listEl) return; // Jika elemen tidak ditemukan, hentikan fungsi
-
-    const now = new Date();
-    now.setHours(0, 0, 0, 0); // Set waktu ke awal hari (00:00:00) untuk perbandingan yang akurat
-
-    // Filter acara yang mulai dalam 7 hari ke depan (termasuk hari ini)
-    const sevenDaysFromNow = new Date(now);
-    sevenDaysFromNow.setDate(now.getDate() + 7);
-    const upcomingEvents = allRawEvents.filter(event => {
-        if (!event.start) return false; // Abaikan acara tanpa tanggal mulai
-        const startDate = new Date(event.start + 'T00:00:00'); // Format tanggal dari Firestore (YYYY-MM-DD)
-        return startDate >= now && startDate <= sevenDaysFromNow;
-    }).sort((a, b) => new Date(a.start) - new Date(b.start)); // Urutkan berdasarkan tanggal mulai
-
-    if (upcomingEvents.length === 0) {
-        listEl.innerHTML = `<p class="text-gray-500 text-center text-sm py-4">Tidak ada agenda.</p>`;
-        return;
-    }
-
-    // Render acara ke dalam elemen HTML
-    listEl.innerHTML = upcomingEvents.map(event => {
-        const startDate = new Date(event.start + 'T00:00:00');
-        const dayName = startDate.toLocaleDateString('id-ID', { weekday: 'short' }); // Misal: "Sen"
-        const dateFormatted = startDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }); // Misal: "1 Jan"
-        // Gunakan warna berdasarkan kategori acara, atau warna default
-        const color = categoryColors[event.category] || categoryColors['umum'];
-
-        return `
-        <div class="flex items-start gap-3 text-sm">
-            <div class="border-l-4 rounded pl-3 py-1 flex-grow" style="border-color: ${color};">
-                <p class="font-semibold text-gray-800">${event.title}</p>
-                <p class="text-xs text-gray-600">${dayName}, ${dateFormatted}</p>
-            </div>
-        </div>
-        `;
-    }).join('');
-}
-
-// Fungsi Analytics dan Chart
+// --- Fungsi Analytics dan Chart ---
+// Sudah didefinisikan sebelumnya di file Anda:
+// function calculateAnalytics(data) { ... }
+// function prepareChartData(data) { ... }
+// function renderAnalyticsCharts(chartData) { ... }
+// function initAnalytics() { ... }
 
 // Variabel global untuk menyimpan instance chart tambahan di analytics
-let analyticsCharts = {};
+// Sudah didefinisikan di awal file Anda:
+// let analyticsCharts = {};
 
-// Fungsi utama untuk menghitung metrik analytics
-function calculateAnalytics(data) {
-    const { customers, packages, invoices, expenses } = data;
-    const today = new Date();
-    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-    const thisMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+// Fungsi untuk menghitung metrik analytics
+// function calculateAnalytics(data) {
+//     const { customers, packages, invoices, expenses } = data;
+//     const today = new Date();
+//     const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+//     const thisMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
-    // --- KPI Dashboard ---
-    // Total Pelanggan
-    document.getElementById('kpi-total-customers').textContent = customers.length;
+//     // --- KPI Dashboard ---
+//     // Gunakan pengecekan null sebelum mengakses elemen
+//     const kpiTotalCustomersEl = document.getElementById('kpi-total-customers');
+//     if (kpiTotalCustomersEl) kpiTotalCustomersEl.textContent = customers.length;
 
-    // Tagihan Bulan Ini (Total Jumlah Tagihan)
-    const invoicesThisMonth = invoices.filter(inv => {
-        if (!inv.periode) return false;
-        const invDate = new Date(inv.periode);
-        return invDate >= thisMonthStart && invDate <= thisMonthEnd;
-    });
-    const totalInvoicesThisMonth = invoicesThisMonth.reduce((sum, inv) => sum + inv.jumlah, 0);
-    document.getElementById('kpi-current-month-invoices').textContent = formatRupiah(totalInvoicesThisMonth);
+//     // Tagihan Bulan Ini (Total Jumlah Tagihan)
+//     const invoicesThisMonth = invoices.filter(inv => {
+//         if (!inv.periode) return false;
+//         const invDate = new Date(inv.periode);
+//         return invDate >= thisMonthStart && invDate <= thisMonthEnd;
+//     });
+//     const totalInvoicesThisMonth = invoicesThisMonth.reduce((sum, inv) => sum + inv.jumlah, 0);
+//     const kpiCurrentMonthInvoicesEl = document.getElementById('kpi-current-month-invoices');
+//     if (kpiCurrentMonthInvoicesEl) kpiCurrentMonthInvoicesEl.textContent = formatRupiah(totalInvoicesThisMonth);
 
-    // Pendapatan Bulan Ini (Jumlah Tagihan yang Lunas)
-    const revenueThisMonth = invoicesThisMonth.filter(inv => inv.status === 'lunas').reduce((sum, inv) => sum + inv.jumlah, 0);
-    document.getElementById('kpi-current-month-revenue').textContent = formatRupiah(revenueThisMonth);
+//     // Pendapatan Bulan Ini (Jumlah Tagihan yang Lunas)
+//     const revenueThisMonth = invoicesThisMonth.filter(inv => inv.status === 'lunas').reduce((sum, inv) => sum + inv.jumlah, 0);
+//     const kpiCurrentMonthRevenueEl = document.getElementById('kpi-current-month-revenue');
+//     if (kpiCurrentMonthRevenueEl) kpiCurrentMonthRevenueEl.textContent = formatRupiah(revenueThisMonth);
 
-    // Tagihan Belum Lunas
-    const pendingInvoices = invoices.filter(inv => inv.status === 'belum lunas').length;
-    document.getElementById('kpi-pending-invoices').textContent = pendingInvoices;
+//     // Tagihan Belum Lunas
+//     const pendingInvoices = invoices.filter(inv => inv.status === 'belum lunas').length;
+//     const kpiPendingInvoicesEl = document.getElementById('kpi-pending-invoices');
+//     if (kpiPendingInvoicesEl) kpiPendingInvoicesEl.textContent = pendingInvoices;
 
-    // --- KPI Analytics ---
-    // Pelanggan Baru Bulan Ini
-    const newCustomersThisMonth = customers.filter(c => {
-        if (!c.joinDate) return false;
-        const joinDate = new Date(c.joinDate);
-        return joinDate >= thisMonthStart && joinDate <= thisMonthEnd;
-    }).length;
-    document.getElementById('kpi-new-customers').textContent = newCustomersThisMonth;
+//     // --- KPI Analytics ---
+//     // Pelanggan Baru Bulan Ini
+//     const newCustomersThisMonth = customers.filter(c => {
+//         if (!c.joinDate) return false;
+//         const joinDate = new Date(c.joinDate);
+//         return joinDate >= thisMonthStart && joinDate <= thisMonthEnd;
+//     }).length;
+//     const kpiNewCustomersEl = document.getElementById('kpi-new-customers');
+//     if (kpiNewCustomersEl) kpiNewCustomersEl.textContent = newCustomersThisMonth;
 
-    // Pengeluaran Bulan Ini
-    const expensesThisMonth = expenses.filter(exp => {
-        if (!exp.tanggal) return false;
-        const expDate = new Date(exp.tanggal);
-        return expDate >= thisMonthStart && expDate <= thisMonthEnd;
-    });
-    const totalExpensesThisMonth = expensesThisMonth.reduce((sum, exp) => sum + exp.jumlah, 0);
-    document.getElementById('total-pengeluaran-dashboard').textContent = formatRupiah(totalExpensesThisMonth);
+//     // Pengeluaran Bulan Ini
+//     const expensesThisMonth = expenses.filter(exp => {
+//         if (!exp.tanggal) return false;
+//         const expDate = new Date(exp.tanggal);
+//         return expDate >= thisMonthStart && expDate <= thisMonthEnd;
+//     });
+//     const totalExpensesThisMonth = expensesThisMonth.reduce((sum, exp) => sum + exp.jumlah, 0);
+//     const totalPengeluaranEl = document.getElementById('total-pengeluaran-dashboard');
+//     if (totalPengeluaranEl) totalPengeluaranEl.textContent = formatRupiah(totalExpensesThisMonth);
 
-    // Pengeluaran Terbesar
-    const expensesByCategory = {};
-    expenses.forEach(e => {
-        expensesByCategory[e.kategori] = (expensesByCategory[e.kategori] || 0) + e.jumlah;
-    });
-    if (Object.keys(expensesByCategory).length > 0) {
-        const [topCategory] = Object.entries(expensesByCategory).sort(([,a], [,b]) => b - a)[0];
-        document.getElementById('kpi-top-expense-category').textContent = topCategory;
-    } else {
-        document.getElementById('kpi-top-expense-category').textContent = '-';
-    }
-}
+//     // Pengeluaran Terbesar
+//     const expensesByCategory = {};
+//     expenses.forEach(e => {
+//         expensesByCategory[e.kategori] = (expensesByCategory[e.kategori] || 0) + e.jumlah;
+//     });
+//     if (Object.keys(expensesByCategory).length > 0) {
+//         const [topCategory] = Object.entries(expensesByCategory).sort(([,a], [,b]) => b - a)[0];
+//         const kpiTopExpenseCategoryEl = document.getElementById('kpi-top-expense-category');
+//         if (kpiTopExpenseCategoryEl) kpiTopExpenseCategoryEl.textContent = topCategory;
+//     } else {
+//         const kpiTopExpenseCategoryEl = document.getElementById('kpi-top-expense-category');
+//         if (kpiTopExpenseCategoryEl) kpiTopExpenseCategoryEl.textContent = '-';
+//     }
+// }
 
 // Fungsi untuk menyiapkan data yang akan digunakan oleh Chart.js
-function prepareChartData(data) {
-    const { customers, packages, invoices, expenses } = data;
+// function prepareChartData(data) {
+//     const { customers, packages, invoices, expenses } = data;
 
-    // Inisialisasi objek history untuk 12 bulan terakhir
-    const history = {};
-    for (let i = 11; i >= 0; i--) {
-        const d = new Date();
-        d.setMonth(d.getMonth() - i);
-        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; // Format: YYYY-MM
-        history[monthKey] = {
-            revenue: 0,
-            profit: 0, // Pendapatan - Pengeluaran
-            customers: 0,
-            expenses: 0
-        };
-    }
+//     // Inisialisasi objek history untuk 12 bulan terakhir
+//     const history = {};
+//     for (let i = 11; i >= 0; i--) {
+//         const d = new Date();
+//         d.setMonth(d.getMonth() - i);
+//         const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; // Format: YYYY-MM
+//         history[monthKey] = {
+//             revenue: 0,
+//             profit: 0, // Pendapatan - Pengeluaran
+//             customers: 0,
+//             expenses: 0
+//         };
+//     }
 
-    // Hitung pendapatan dan pelanggan per bulan
-    invoices.forEach(inv => {
-        if (!inv.periode || inv.status !== 'lunas') return; // Hanya tagihan lunas yang dihitung
-        const d = new Date(inv.periode);
-        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        if (history[monthKey]) {
-            history[monthKey].revenue += inv.jumlah;
-        }
-    });
+//     // Hitung pendapatan dan pelanggan per bulan
+//     invoices.forEach(inv => {
+//         if (!inv.periode || inv.status !== 'lunas') return; // Hanya tagihan lunas yang dihitung
+//         const d = new Date(inv.periode);
+//         const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+//         if (history[monthKey]) {
+//             history[monthKey].revenue += inv.jumlah;
+//         }
+//     });
 
-    // Hitung pengeluaran per bulan
-    expenses.forEach(e => {
-        if (!e.tanggal) return;
-        const d = new Date(e.tanggal);
-        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        if (history[monthKey]) {
-            history[monthKey].expenses += e.jumlah;
-        }
-    });
+//     // Hitung pengeluaran per bulan
+//     expenses.forEach(e => {
+//         if (!e.tanggal) return;
+//         const d = new Date(e.tanggal);
+//         const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+//         if (history[monthKey]) {
+//             history[monthKey].expenses += e.jumlah;
+//         }
+//     });
 
-    // Hitung jumlah pelanggan per bulan (jumlah pelanggan yang aktif di bulan itu)
-    // Logika ini bisa kompleks, misalnya: pelanggan yang join sebelum atau di bulan itu, dan belum dihapus
-    // Untuk sederhananya, kita gunakan jumlah pelanggan di akhir bulan
-    const allJoinDates = [...customers].sort((a, b) => new Date(a.joinDate) - new Date(b.joinDate)).map(c => new Date(c.joinDate));
-    Object.keys(history).forEach(monthKey => {
-        const [year, month] = monthKey.split('-').map(Number);
-        const endOfMonth = new Date(year, month, 0); // Akhir bulan
-        // Jumlah pelanggan yang join sebelum atau di akhir bulan itu
-        const activeCustomersCount = allJoinDates.filter(joinDate => joinDate <= endOfMonth).length;
-        history[monthKey].customers = activeCustomersCount;
-        // Hitung laba (sederhana: pendapatan - pengeluaran)
-        history[monthKey].profit = history[monthKey].revenue - history[monthKey].expenses;
-    });
+//     // Hitung jumlah pelanggan per bulan (jumlah pelanggan di akhir bulan)
+//     const allJoinDates = [...customers].sort((a, b) => new Date(a.joinDate) - new Date(b.joinDate)).map(c => new Date(c.joinDate));
+//     Object.keys(history).forEach(monthKey => {
+//         const [year, month] = monthKey.split('-').map(Number);
+//         const endOfMonth = new Date(year, month, 0); // Akhir bulan
+//         const activeCustomersCount = allJoinDates.filter(joinDate => joinDate <= endOfMonth).length;
+//         history[monthKey].customers = activeCustomersCount;
+//         history[monthKey].profit = history[monthKey].revenue - history[monthKey].expenses;
+//     });
 
-    // Hitung pendapatan per paket
-    const revenueByPackage = {};
-    invoices.filter(inv => inv.status === 'lunas').forEach(inv => {
-        const customer = customers.find(c => c.id === inv.pelangganId);
-        if (customer) {
-            const pkg = packages.find(p => p.id === customer.paketId);
-            if (pkg) {
-                revenueByPackage[pkg.nama] = (revenueByPackage[pkg.nama] || 0) + inv.jumlah;
-            }
-        }
-    });
+//     // Hitung pendapatan per paket
+//     const revenueByPackage = {};
+//     invoices.filter(inv => inv.status === 'lunas').forEach(inv => {
+//         const customer = customers.find(c => c.id === inv.pelangganId);
+//         if (customer) {
+//             const pkg = packages.find(p => p.id === customer.paketId);
+//             if (pkg) {
+//                 revenueByPackage[pkg.nama] = (revenueByPackage[pkg.nama] || 0) + inv.jumlah;
+//             }
+//         }
+//     });
 
-    // Hitung pengeluaran per kategori
-    const expensesByCategory = {};
-    expenses.forEach(e => {
-        expensesByCategory[e.kategori] = (expensesByCategory[e.kategori] || 0) + e.jumlah;
-    });
+//     // Hitung pengeluaran per kategori
+//     const expensesByCategory = {};
+//     expenses.forEach(e => {
+//         expensesByCategory[e.kategori] = (expensesByCategory[e.kategori] || 0) + e.jumlah;
+//     });
 
-    return { history, revenueByPackage, expensesByCategory };
-}
+//     return { history, revenueByPackage, expensesByCategory };
+// }
 
 // Fungsi untuk menginisialisasi dan merender chart di tab Analytics
-function renderAnalyticsCharts(chartData) {
-    // Hancurkan instance chart sebelumnya untuk mencegah memory leak
-    Object.values(analyticsCharts).forEach(chart => {
-        if (chart) chart.destroy();
-    });
+// function renderAnalyticsCharts(chartData) {
+//     // Hancurkan instance chart sebelumnya untuk mencegah memory leak
+//     Object.values(analyticsCharts).forEach(chart => {
+//         if (chart) chart.destroy();
+//     });
 
-    const { history, revenueByPackage, expensesByCategory } = chartData;
-    const colorPalette = ['#4f46e5', '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#d946ef'];
+//     const { history, revenueByPackage, expensesByCategory } = chartData;
+//     const colorPalette = ['#4f46e5', '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#d946ef'];
 
-    const labels = Object.keys(history).map(k => new Date(k + '-02').toLocaleString('id-ID', { month: 'short', year: 'numeric' }));
-    const profitData = Object.values(history).map(h => h.profit);
-    const revenueData = Object.values(history).map(h => h.revenue);
+//     const labels = Object.keys(history).map(k => new Date(k + '-02').toLocaleString('id-ID', { month: 'short', year: 'numeric' }));
+//     const profitData = Object.values(history).map(h => h.profit);
+//     const revenueData = Object.values(history).map(h => h.revenue);
 
-    // Gabungkan data profit dan revenue untuk menghitung padding skala Y
-    const allDataPoints = [...profitData, ...revenueData];
-    const dataMax = Math.max(0, ...allDataPoints);
-    const dataMin = Math.min(0, ...allDataPoints);
-    const padding = (dataMax - dataMin) * 0.1;
-    const calculatedMax = dataMax + padding;
-    const calculatedMin = dataMin - padding;
+//     // Gabungkan data profit dan revenue untuk menghitung padding skala Y
+//     const allDataPoints = [...profitData, ...revenueData];
+//     const dataMax = Math.max(0, ...allDataPoints);
+//     const dataMin = Math.min(0, ...allDataPoints);
+//     const padding = (dataMax - dataMin) * 0.1;
+//     const calculatedMax = dataMax + padding;
+//     const calculatedMin = dataMin - padding;
 
-    // Chart 1: Pendapatan vs Laba Kotor
-    analyticsCharts.revenueProfit = new Chart(document.getElementById('revenue-profit-chart').getContext('2d'), {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Pendapatan',
-                    data: revenueData,
-                    backgroundColor: '#3b82f6'
-                },
-                {
-                    label: 'Laba Kotor',
-                    data: profitData,
-                    backgroundColor: '#10b981'
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: { stacked: false },
-                y: {
-                    stacked: false,
-                    min: calculatedMin,
-                    max: calculatedMax
-                }
-            }
-        }
-    });
+//     // Chart 1: Pendapatan vs Laba Kotor
+//     analyticsCharts.revenueProfit = new Chart(document.getElementById('revenue-profit-chart').getContext('2d'), {
+//         type: 'bar',
+//          {
+//             labels: labels,
+//             datasets: [
+//                 {
+//                     label: 'Pendapatan',
+//                      revenueData,
+//                     backgroundColor: '#3b82f6'
+//                 },
+//                 {
+//                     label: 'Laba Kotor',
+//                      profitData,
+//                     backgroundColor: '#10b981'
+//                 }
+//             ]
+//         },
+//         options: {
+//             responsive: true,
+//             maintainAspectRatio: false,
+//             scales: {
+//                 x: { stacked: false },
+//                 y: {
+//                     stacked: false,
+//                     min: calculatedMin,
+//                     max: calculatedMax
+//                 }
+//             }
+//         }
+//     });
 
-    // Chart 2: Komposisi Pendapatan per Paket
-    analyticsCharts.revenueComp = new Chart(document.getElementById('revenue-composition-chart').getContext('2d'), {
-        type: 'doughnut',
-        data: {
-            labels: Object.keys(revenueByPackage),
-            datasets: [{
-                label: 'Pendapatan',
-                data: Object.values(revenueByPackage),
-                backgroundColor: colorPalette
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
+//     // Chart 2: Komposisi Pendapatan per Paket
+//     analyticsCharts.revenueComp = new Chart(document.getElementById('revenue-composition-chart').getContext('2d'), {
+//         type: 'doughnut',
+//          {
+//             labels: Object.keys(revenueByPackage),
+//             datasets: [{
+//                 label: 'Pendapatan',
+//                  Object.values(revenueByPackage),
+//                 backgroundColor: colorPalette
+//             }]
+//         },
+//         options: {
+//             responsive: true,
+//             maintainAspectRatio: false
+//         }
+//     });
 
-    // Chart 3: Pertumbuhan Jumlah Pelanggan
-    analyticsCharts.customerGrowth = new Chart(document.getElementById('customer-growth-chart').getContext('2d'), {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Total Pelanggan',
-                data: Object.values(history).map(h => h.customers),
-                borderColor: '#4f46e5',
-                backgroundColor: 'rgba(79, 70, 229, 0.1)',
-                fill: true,
-                tension: 0.3
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: { beginAtZero: true }
-            }
-        }
-    });
+//     // Chart 3: Pertumbuhan Jumlah Pelanggan
+//     analyticsCharts.customerGrowth = new Chart(document.getElementById('customer-growth-chart').getContext('2d'), {
+//         type: 'line',
+//         data: {
+//             labels: labels,
+//             datasets: [{
+//                 label: 'Total Pelanggan',
+//                  Object.values(history).map(h => h.customers),
+//                 borderColor: '#4f46e5',
+//                 backgroundColor: 'rgba(79, 70, 229, 0.1)',
+//                 fill: true,
+//                 tension: 0.3
+//             }]
+//         },
+//         options: {
+//             responsive: true,
+//             maintainAspectRatio: false,
+//             scales: {
+//                 y: { beginAtZero: true }
+//             }
+//         }
+//     });
 
-    // Chart 4: Komposisi Pengeluaran per Kategori
-    analyticsCharts.expensesComp = new Chart(document.getElementById('expenses-composition-chart').getContext('2d'), {
-        type: 'pie',
-        data: {
-            labels: Object.keys(expensesByCategory),
-            datasets: [{
-                label: 'Pengeluaran',
-                data: Object.values(expensesByCategory),
-                backgroundColor: colorPalette.reverse() // Balikkan warna agar berbeda
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
-}
+//     // Chart 4: Komposisi Pengeluaran per Kategori
+//     analyticsCharts.expensesComp = new Chart(document.getElementById('expenses-composition-chart').getContext('2d'), {
+//         type: 'pie',
+//          {
+//             labels: Object.keys(expensesByCategory),
+//             datasets: [{
+//                 label: 'Pengeluaran',
+//                  Object.values(expensesByCategory),
+//                 backgroundColor: colorPalette.reverse() // Balikkan warna agar berbeda
+//             }]
+//         },
+//         options: {
+//             responsive: true,
+//             maintainAspectRatio: false
+//         }
+//     });
+// }
 
 // Fungsi untuk menginisialisasi tab Analytics saat pertama kali dibuka
-function initAnalytics() {
-    const data = { customers: allCustomers, packages: allPackages, invoices: allInvoices, expenses: allExpenses };
+// function initAnalytics() {
+//     const data = { customers: allCustomers, packages: allPackages, invoices: allInvoices, expenses: allExpenses };
 
-    // Jika data belum dimuat, tampilkan loading
-    if (data.customers.length === 0 && data.packages.length === 0) {
-        document.getElementById('loading-indicator-analytics').style.display = 'block';
-        document.getElementById('analytics-content-container').style.display = 'none';
-        return;
-    }
+//     // Jika data belum dimuat, tampilkan loading
+//     if (data.customers.length === 0 && data.packages.length === 0) {
+//         document.getElementById('loading-indicator-analytics').style.display = 'block';
+//         document.getElementById('analytics-content-container').style.display = 'none';
+//         return;
+//     }
 
-    // Sembunyikan loading, tampilkan konten
-    document.getElementById('loading-indicator-analytics').style.display = 'none';
-    document.getElementById('analytics-content-container').style.display = 'block';
+//     // Sembunyikan loading, tampilkan konten
+//     document.getElementById('loading-indicator-analytics').style.display = 'none';
+//     document.getElementById('analytics-content-container').style.display = 'block';
 
-    // Update tanggal di header analytics
-    document.getElementById('current-date-analytics').textContent = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+//     // Update tanggal di header analytics
+//     document.getElementById('current-date-analytics').textContent = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-    // Hitung analytics dan render chart
-    calculateAnalytics(data);
-    renderAnalyticsCharts(prepareChartData(data));
-    analyticsInitialized = true; // Tandai bahwa analytics telah diinisialisasi
-}
+//     // Hitung analytics dan render chart
+//     calculateAnalytics(data);
+//     renderAnalyticsCharts(prepareChartData(data));
+//     analyticsInitialized = true; // Tandai bahwa analytics telah diinisialisasi
+// }
+
+// Fungsi Load Calendar Events (untuk widget agenda mendatang di dashboard)
+// function loadCalendarEventsForWidget() { // Nama fungsi diubah agar lebih spesifik
+//     const q = query(getCollectionRef('calendar_events')); // Asumsi koleksi disimpan di dataContainerPath
+
+//     // Unsubscribe dari listener sebelumnya jika ada
+//     if (unsubscribeCalendarEvents) unsubscribeCalendarEvents();
+
+//     unsubscribeCalendarEvents = onSnapshot(q, (snapshot) => {
+//         // Ambil semua data acara dari Firestore
+//         const allRawEvents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+//         // Perbarui widget agenda mendatang dengan data baru
+//         renderUpcomingEventsWidget(allRawEvents);
+//     });
+// }
+
+// Fungsi untuk merender widget agenda mendatang di dashboard
+// function renderUpcomingEventsWidget(allRawEvents) {
+//     const listEl = document.getElementById('upcoming-events-widget');
+//     if (!listEl) return; // Jika elemen tidak ditemukan, hentikan fungsi
+
+//     const now = new Date();
+//     now.setHours(0, 0, 0, 0); // Set waktu ke awal hari (00:00:00) untuk perbandingan yang akurat
+
+//     // Filter acara yang mulai dalam 7 hari ke depan (termasuk hari ini)
+//     const sevenDaysFromNow = new Date(now);
+//     sevenDaysFromNow.setDate(now.getDate() + 7);
+//     const upcomingEvents = allRawEvents.filter(event => {
+//         if (!event.start) return false; // Abaikan acara tanpa tanggal mulai
+//         const startDate = new Date(event.start + 'T00:00:00'); // Format tanggal dari Firestore (YYYY-MM-DD)
+//         return startDate >= now && startDate <= sevenDaysFromNow;
+//     }).sort((a, b) => new Date(a.start) - new Date(b.start)); // Urutkan berdasarkan tanggal mulai
+
+//     if (upcomingEvents.length === 0) {
+//         listEl.innerHTML = `<p class="text-gray-500 text-center text-sm py-4">Tidak ada agenda.</p>`;
+//         return;
+//     }
+
+//     // Render acara ke dalam elemen HTML
+//     listEl.innerHTML = upcomingEvents.map(event => {
+//         const startDate = new Date(event.start + 'T00:00:00');
+//         const dayName = startDate.toLocaleDateString('id-ID', { weekday: 'short' }); // Misal: "Sen"
+//         const dateFormatted = startDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }); // Misal: "1 Jan"
+//         // Gunakan warna berdasarkan kategori acara, atau warna default
+//         const color = categoryColors[event.category] || categoryColors['umum'];
+
+//         return `
+//         <div class="flex items-start gap-3 text-sm">
+//             <div class="border-l-4 rounded pl-3 py-1 flex-grow" style="border-color: ${color};">
+//                 <p class="font-semibold text-gray-800">${event.title}</p>
+//                 <p class="text-xs text-gray-600">${dayName}, ${dateFormatted}</p>
+//             </div>
+//         </div>
+//         `;
+//     }).join('');
+// }
+
