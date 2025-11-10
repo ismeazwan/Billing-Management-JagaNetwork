@@ -23,6 +23,7 @@
             <div class="navbar-nav ms-auto">
                 <span class="navbar-text me-3" id="userGreeting">Halo!</span>
                 <a class="nav-link" href="#" id="loginBtn">Login</a>
+                <a class="nav-link" href="#" id="registerBtn">Register Admin</a>
                 <a class="nav-link" href="#" id="logoutBtn" style="display:none;">Logout</a>
             </div>
         </div>
@@ -35,7 +36,8 @@
             <h1 class="text-center">Selamat Datang di JagaNetwork</h1>
             <p class="text-center">Sistem Billing & Management Internet Service Provider</p>
             <div class="text-center">
-                <button class="btn btn-primary" id="loginRedirectBtn">Login untuk Melanjutkan</button>
+                <button class="btn btn-primary me-2" id="loginRedirectBtn">Login</button>
+                <button class="btn btn-outline-secondary" id="registerRedirectBtn">Register Admin</button>
             </div>
         </div>
 
@@ -237,6 +239,59 @@
                             </div>
                             <button type="submit" class="btn btn-primary w-100">Login</button>
                         </form>
+                        <div class="text-center mt-2">
+                            <a href="#" id="forgotPasswordBtn">Lupa Password?</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Register Admin -->
+        <div class="modal fade" id="registerModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Register Admin Baru</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="registerForm">
+                            <div class="mb-3">
+                                <label for="regEmail" class="form-label">Email Admin</label>
+                                <input type="email" class="form-control" id="regEmail" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="regPassword" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="regPassword" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="regConfirmPassword" class="form-label">Konfirmasi Password</label>
+                                <input type="password" class="form-control" id="regConfirmPassword" required>
+                            </div>
+                            <button type="submit" class="btn btn-success w-100">Register Admin</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Reset Password -->
+        <div class="modal fade" id="resetPasswordModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Reset Password</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="resetPasswordForm">
+                            <div class="mb-3">
+                                <label for="resetEmail" class="form-label">Email Anda</label>
+                                <input type="email" class="form-control" id="resetEmail" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Kirim Link Reset</button>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -265,14 +320,21 @@
 
             // Element DOM
             const loginBtn = document.getElementById('loginBtn');
+            const registerBtn = document.getElementById('registerBtn');
             const logoutBtn = document.getElementById('logoutBtn');
             const userGreeting = document.getElementById('userGreeting');
             const welcomeSection = document.getElementById('welcomeSection');
             const adminDashboard = document.getElementById('adminDashboard');
             const customerDashboard = document.getElementById('customerDashboard');
             const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const resetPasswordForm = document.getElementById('resetPasswordForm');
             const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+            const registerModal = new bootstrap.Modal(document.getElementById('registerModal'));
+            const resetPasswordModal = new bootstrap.Modal(document.getElementById('resetPasswordModal'));
             const loginRedirectBtn = document.getElementById('loginRedirectBtn');
+            const registerRedirectBtn = document.getElementById('registerRedirectBtn');
+            const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
             const viewCustomersBtn = document.getElementById('viewCustomersBtn');
             const viewBillsBtn = document.getElementById('viewBillsBtn');
             const addCustomerBtn = document.getElementById('addCustomerBtn');
@@ -282,6 +344,38 @@
             const customerForm = document.getElementById('customerForm');
             const billForm = document.getElementById('billForm');
             const viewMyBillsBtn = document.getElementById('viewMyBillsBtn');
+
+            // Fungsi untuk cek apakah sudah ada admin
+            async function checkIfAdminExists() {
+                try {
+                    const snapshot = await db.collection("users").where("role", "==", "admin").limit(1).get();
+                    return !snapshot.empty;
+                } catch (error) {
+                    console.error("Gagal memeriksa admin: ", error);
+                    return false;
+                }
+            }
+
+            // Fungsi untuk membuat akun admin baru di Auth dan Firestore
+            async function createAdminAccount(email, password) {
+                try {
+                    // 1. Buat akun di Firebase Auth
+                    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                    const uid = userCredential.user.uid;
+
+                    // 2. Buat dokumen di koleksi 'users' dengan role 'admin'
+                    await db.collection("users").doc(uid).set({
+                        role: "admin"
+                    });
+
+                    alert('Akun admin baru berhasil dibuat.');
+                    return true;
+                } catch (error) {
+                    console.error("Error membuat akun admin: ", error);
+                    alert('Gagal membuat akun admin: ' + error.message);
+                    return false;
+                }
+            }
 
             // Fungsi untuk membuat akun pelanggan baru di Auth dan Firestore
             async function createCustomerAccount(email, password, name, address, plan) {
@@ -311,6 +405,23 @@
                     return false;
                 }
             }
+
+            // Fungsi untuk logout otomatis setelah tidak aktif
+            let logoutTimer;
+            function resetLogoutTimer() {
+                if (logoutTimer) clearTimeout(logoutTimer);
+                logoutTimer = setTimeout(() => {
+                    if (auth.currentUser) {
+                        alert('Sesi Anda telah habis. Silakan login kembali.');
+                        auth.signOut();
+                        window.location.reload();
+                    }
+                }, 30 * 60 * 1000); // 30 menit
+            }
+
+            window.addEventListener('click', resetLogoutTimer);
+            window.addEventListener('keydown', resetLogoutTimer);
+            resetLogoutTimer(); // Inisialisasi timer saat halaman dimuat
 
             // Fungsi untuk memuat data dashboard
             function loadDashboardData(role) {
@@ -438,8 +549,31 @@
                 loginModal.show();
             });
 
+            registerBtn.addEventListener('click', async () => {
+                const adminExists = await checkIfAdminExists();
+                if (adminExists) {
+                    alert('Admin sudah terdaftar. Hanya satu admin yang bisa dibuat.');
+                } else {
+                    registerModal.show();
+                }
+            });
+
             loginRedirectBtn.addEventListener('click', () => {
                 loginModal.show();
+            });
+
+            registerRedirectBtn.addEventListener('click', async () => {
+                const adminExists = await checkIfAdminExists();
+                if (adminExists) {
+                    alert('Admin sudah terdaftar. Hanya satu admin yang bisa dibuat.');
+                } else {
+                    registerModal.show();
+                }
+            });
+
+            forgotPasswordBtn.addEventListener('click', () => {
+                loginModal.hide();
+                resetPasswordModal.show();
             });
 
             logoutBtn.addEventListener('click', () => {
@@ -449,10 +583,31 @@
                     welcomeSection.classList.remove('hidden');
                     logoutBtn.style.display = 'none';
                     loginBtn.style.display = 'inline';
+                    registerBtn.style.display = 'inline';
                     userGreeting.textContent = 'Halo!';
                 });
             });
 
+            // Form Register Admin
+            registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('regEmail').value;
+                const password = document.getElementById('regPassword').value;
+                const confirmPassword = document.getElementById('regConfirmPassword').value;
+
+                if (password !== confirmPassword) {
+                    alert('Password dan konfirmasi password tidak cocok.');
+                    return;
+                }
+
+                const success = await createAdminAccount(email, password);
+                if (success) {
+                    registerModal.hide();
+                    document.getElementById('registerForm').reset();
+                }
+            });
+
+            // Form Login
             loginForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const email = document.getElementById('emailInput').value;
@@ -464,6 +619,7 @@
                         hideAllSections();
                         logoutBtn.style.display = 'inline';
                         loginBtn.style.display = 'none';
+                        registerBtn.style.display = 'none';
                         userGreeting.textContent = `Halo, ${email}`;
 
                         // Ambil role dari dokumen users
@@ -562,6 +718,23 @@
                         alert('Login gagal: ' + error.message);
                     });
             });
+
+            // Form Reset Password
+            resetPasswordForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const email = document.getElementById('resetEmail').value;
+
+                auth.sendPasswordResetEmail(email)
+                    .then(() => {
+                        alert('Link reset password telah dikirim ke email Anda.');
+                        resetPasswordModal.hide();
+                        document.getElementById('resetPasswordForm').reset();
+                    })
+                    .catch((error) => {
+                        alert('Gagal mengirim link reset: ' + error.message);
+                    });
+            });
+
         });
     </script>
 
