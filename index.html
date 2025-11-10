@@ -8,11 +8,14 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { background-color: #f8f9fa; }
         .card { box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); border: 1px solid rgba(0, 0, 0, 0.125); }
         .navbar-brand { font-weight: bold; }
         .hidden { display: none; }
+        .struk-container { background-color: white; padding: 20px; margin: 20px; border: 1px solid #ccc; }
     </style>
 </head>
 <body>
@@ -44,201 +47,297 @@
         <!-- Dashboard Admin -->
         <div id="adminDashboard" class="hidden">
             <h2>Dashboard Admin</h2>
-            <div class="row mb-4">
-                <div class="col-md-3 mb-3">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h5 class="card-title">Pelanggan</h5>
-                            <p class="card-text" id="customerCount">0</p>
-                            <a href="#" class="btn btn-outline-primary" id="viewCustomersBtn">Lihat Daftar</a>
+            <ul class="nav nav-tabs mb-4">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#" id="navOverview">Ringkasan</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" id="navMonitoring">Monitoring</a>
+                </li>
+            </ul>
+
+            <!-- Tab Ringkasan -->
+            <div id="overviewTab">
+                <div class="row mb-4">
+                    <div class="col-md-3 mb-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="card-title">Pelanggan</h5>
+                                <p class="card-text" id="customerCount">0</p>
+                                <a href="#" class="btn btn-outline-primary" id="viewCustomersBtn">Lihat Daftar</a>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h5 class="card-title">Calon Pelanggan</h5>
-                            <p class="card-text" id="leadCount">0</p>
-                            <a href="#" class="btn btn-outline-warning" id="viewLeadsBtn">Lihat Daftar</a>
+                    <div class="col-md-3 mb-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="card-title">Calon Pelanggan</h5>
+                                <p class="card-text" id="leadCount">0</p>
+                                <a href="#" class="btn btn-outline-warning" id="viewLeadsBtn">Lihat Daftar</a>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h5 class="card-title">Tagihan</h5>
-                            <p class="card-text" id="billingCount">0</p>
-                            <a href="#" class="btn btn-outline-success" id="viewBillsBtn">Lihat Tagihan</a>
+                    <div class="col-md-3 mb-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="card-title">Tagihan</h5>
+                                <p class="card-text" id="billingCount">0</p>
+                                <a href="#" class="btn btn-outline-success" id="viewBillsBtn">Lihat Tagihan</a>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h5 class="card-title">Tambah Data</h5>
-                            <div class="btn-group">
-                                <a href="#" class="btn btn-outline-warning btn-sm" id="addLeadBtn">Calon</a>
-                                <a href="#" class="btn btn-outline-success btn-sm" id="addCustomerBtn">Pelanggan</a>
+                    <div class="col-md-3 mb-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="card-title">Tambah Data</h5>
+                                <div class="btn-group">
+                                    <a href="#" class="btn btn-outline-warning btn-sm" id="addLeadBtn">Calon</a>
+                                    <a href="#" class="btn btn-outline-success btn-sm" id="addCustomerBtn">Pelanggan</a>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Tabel Pelanggan -->
-            <div id="customersList" class="hidden">
-                <h3>Daftar Pelanggan</h3>
-                <div class="mb-3">
-                    <input type="text" id="searchCustomer" class="form-control" placeholder="Cari pelanggan...">
+                <!-- Tabel Pelanggan -->
+                <div id="customersList" class="hidden">
+                    <h3>Daftar Pelanggan</h3>
+                    <div class="mb-3">
+                        <input type="text" id="searchCustomer" class="form-control" placeholder="Cari pelanggan...">
+                    </div>
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Nama</th>
+                                <th>Email</th>
+                                <th>Alamat</th>
+                                <th>Plan</th>
+                                <th>Status</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customersTableBody">
+                            <!-- Isi tabel akan diisi oleh JS -->
+                        </tbody>
+                    </table>
                 </div>
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Nama</th>
-                            <th>Email</th>
-                            <th>Alamat</th>
-                            <th>Plan</th>
-                            <th>Status</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="customersTableBody">
-                        <!-- Isi tabel akan diisi oleh JS -->
-                    </tbody>
-                </table>
-            </div>
 
-            <!-- Tabel Calon Pelanggan -->
-            <div id="leadsList" class="hidden">
-                <h3>Daftar Calon Pelanggan</h3>
-                <div class="mb-3">
-                    <input type="text" id="searchLead" class="form-control" placeholder="Cari calon pelanggan...">
+                <!-- Tabel Calon Pelanggan -->
+                <div id="leadsList" class="hidden">
+                    <h3>Daftar Calon Pelanggan</h3>
+                    <div class="mb-3">
+                        <input type="text" id="searchLead" class="form-control" placeholder="Cari calon pelanggan...">
+                    </div>
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Nama</th>
+                                <th>Email</th>
+                                <th>Alamat</th>
+                                <th>Minat Plan</th>
+                                <th>Status</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leadsTableBody">
+                            <!-- Isi tabel akan diisi oleh JS -->
+                        </tbody>
+                    </table>
                 </div>
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Nama</th>
-                            <th>Email</th>
-                            <th>Alamat</th>
-                            <th>Minat Plan</th>
-                            <th>Status</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="leadsTableBody">
-                        <!-- Isi tabel akan diisi oleh JS -->
-                    </tbody>
-                </table>
+
+                <!-- Form Tambah/Ubah Calon Pelanggan -->
+                <div id="addLeadForm" class="hidden">
+                    <h3 id="leadFormTitle">Tambah Calon Pelanggan Baru</h3>
+                    <form id="leadForm">
+                        <input type="hidden" id="leadId">
+                        <div class="mb-3">
+                            <label for="leadName" class="form-label">Nama</label>
+                            <input type="text" class="form-control" id="leadName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="leadEmail" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="leadEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="leadAddress" class="form-label">Alamat</label>
+                            <input type="text" class="form-control" id="leadAddress" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="leadPlan" class="form-label">Minat Plan</label>
+                            <input type="text" class="form-control" id="leadPlan">
+                        </div>
+                        <div class="mb-3">
+                            <label for="leadStatus" class="form-label">Status</label>
+                            <select class="form-select" id="leadStatus">
+                                <option value="pending">Pending</option>
+                                <option value="contacted">Sudah Dihubungi</option>
+                                <option value="converted">Dikonversi ke Pelanggan</option>
+                                <option value="unresponsive">Tidak Merespon</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-success">Simpan</button>
+                        <button type="button" class="btn btn-secondary" id="cancelAddLead">Batal</button>
+                    </form>
+                </div>
+
+                <!-- Form Tambah Pelanggan -->
+                <div id="addCustomerForm" class="hidden">
+                    <h3>Tambah Pelanggan Baru</h3>
+                    <form id="customerForm">
+                        <div class="mb-3">
+                            <label for="custName" class="form-label">Nama</label>
+                            <input type="text" class="form-control" id="custName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="custEmail" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="custEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="custAddress" class="form-label">Alamat</label>
+                            <input type="text" class="form-control" id="custAddress" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="custPlan" class="form-label">Plan</label>
+                            <input type="text" class="form-control" id="custPlan" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="custStatus" class="form-label">Status</label>
+                            <select class="form-select" id="custStatus">
+                                <option value="aktif">Aktif</option>
+                                <option value="non-aktif">Non-Aktif</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-success">Buat Akun Pelanggan</button>
+                        <button type="button" class="btn btn-secondary" id="cancelAddCust">Batal</button>
+                    </form>
+                </div>
+
+                <!-- Tabel Tagihan -->
+                <div id="billsList" class="hidden">
+                    <h3>Daftar Tagihan</h3>
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ID Pelanggan</th>
+                                <th>Nama Pelanggan</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                                <th>Pembayaran</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="billsTableBody">
+                            <!-- Isi tabel akan diisi oleh JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Form Tambah Tagihan -->
+                <div id="addBillForm" class="hidden">
+                    <h3>Tambah Tagihan Baru</h3>
+                    <form id="billForm">
+                        <div class="mb-3">
+                            <label for="billCustomerId" class="form-label">ID Pelanggan</label>
+                            <input type="text" class="form-control" id="billCustomerId" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="billAmount" class="form-label">Jumlah (Rp)</label>
+                            <input type="number" class="form-control" id="billAmount" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="billStatus" class="form-label">Status</label>
+                            <select class="form-select" id="billStatus" required>
+                                <option value="belum_dibayar">Belum Dibayar</option>
+                                <option value="dibayar">Dibayar</option>
+                                <option value="dikonfirmasi">Dikonfirmasi</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="billPaymentMethod" class="form-label">Metode Pembayaran</label>
+                            <select class="form-select" id="billPaymentMethod" required>
+                                <option value="qris">QRIS</option>
+                                <option value="norek">No. Rekening</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="billPaymentInfo" class="form-label">Info Pembayaran (QRIS atau No. Rekening)</label>
+                            <input type="text" class="form-control" id="billPaymentInfo" required>
+                        </div>
+                        <button type="submit" class="btn btn-success">Simpan</button>
+                        <button type="button" class="btn btn-secondary" id="cancelAddBill">Batal</button>
+                    </form>
+                </div>
+
+                <!-- Detail Tagihan & Struk -->
+                <div id="billDetail" class="hidden">
+                    <h3>Detail Tagihan</h3>
+                    <div class="struk-container" id="strukContent">
+                        <h4 class="text-center">JagaNetwork - Struk Tagihan</h4>
+                        <p><strong>ID Tagihan:</strong> <span id="detailId"></span></p>
+                        <p><strong>Nama Pelanggan:</strong> <span id="detailCustomerName"></span></p>
+                        <p><strong>ID Pelanggan:</strong> <span id="detailCustomerId"></span></p>
+                        <p><strong>Total:</strong> Rp <span id="detailAmount"></span></p>
+                        <p><strong>Status:</strong> <span id="detailStatus"></span></p>
+                        <p><strong>Metode Pembayaran:</strong> <span id="detailMethod"></span></p>
+                        <p><strong>Info Pembayaran:</strong> <span id="detailInfo"></span></p>
+                        <div id="qrisContainer" class="text-center">
+                            <canvas id="qrisCanvas" width="200" height="200"></canvas>
+                        </div>
+                        <div id="norekContainer" class="text-center">
+                            <p><strong>No. Rekening:</strong> <span id="norekValue"></span></p>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary mt-3" onclick="window.print()">Cetak Struk</button>
+                    <button class="btn btn-secondary mt-3" id="backToBillsBtn">Kembali ke Daftar</button>
+                </div>
             </div>
 
-            <!-- Form Tambah/Ubah Calon Pelanggan -->
-            <div id="addLeadForm" class="hidden">
-                <h3 id="leadFormTitle">Tambah Calon Pelanggan Baru</h3>
-                <form id="leadForm">
-                    <input type="hidden" id="leadId">
-                    <div class="mb-3">
-                        <label for="leadName" class="form-label">Nama</label>
-                        <input type="text" class="form-control" id="leadName" required>
+            <!-- Tab Monitoring -->
+            <div id="monitoringTab" class="hidden">
+                <h3>Monitoring & Statistik</h3>
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Grafik Pendapatan Bulanan</h5>
+                                <canvas id="revenueChart"></canvas>
+                            </div>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="leadEmail" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="leadEmail" required>
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Status Layanan ISP</h5>
+                                <p><strong>Uptime:</strong> <span id="uptimeValue">99.9%</span></p>
+                                <p><strong>Status:</strong> <span id="statusValue" class="text-success">Stabil</span></p>
+                                <p><strong>Perangkat Aktif:</strong> <span id="devicesActive">15/16</span></p>
+                                <p><strong>Latensi Rata-rata:</strong> <span id="latencyValue">12 ms</span></p>
+                            </div>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="leadAddress" class="form-label">Alamat</label>
-                        <input type="text" class="form-control" id="leadAddress" required>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Log Aktivitas</h5>
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Waktu</th>
+                                            <th>Pengguna</th>
+                                            <th>Aksi</th>
+                                            <th>Deskripsi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="activityLogBody">
+                                        <!-- Isi tabel akan diisi oleh JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="leadPlan" class="form-label">Minat Plan</label>
-                        <input type="text" class="form-control" id="leadPlan">
-                    </div>
-                    <div class="mb-3">
-                        <label for="leadStatus" class="form-label">Status</label>
-                        <select class="form-select" id="leadStatus">
-                            <option value="pending">Pending</option>
-                            <option value="contacted">Sudah Dihubungi</option>
-                            <option value="converted">Dikonversi ke Pelanggan</option>
-                            <option value="unresponsive">Tidak Merespon</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-success">Simpan</button>
-                    <button type="button" class="btn btn-secondary" id="cancelAddLead">Batal</button>
-                </form>
-            </div>
-
-            <!-- Form Tambah Pelanggan -->
-            <div id="addCustomerForm" class="hidden">
-                <h3>Tambah Pelanggan Baru</h3>
-                <form id="customerForm">
-                    <div class="mb-3">
-                        <label for="custName" class="form-label">Nama</label>
-                        <input type="text" class="form-control" id="custName" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="custEmail" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="custEmail" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="custAddress" class="form-label">Alamat</label>
-                        <input type="text" class="form-control" id="custAddress" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="custPlan" class="form-label">Plan</label>
-                        <input type="text" class="form-control" id="custPlan" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="custStatus" class="form-label">Status</label>
-                        <select class="form-select" id="custStatus">
-                            <option value="aktif">Aktif</option>
-                            <option value="non-aktif">Non-Aktif</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-success">Buat Akun Pelanggan</button>
-                    <button type="button" class="btn btn-secondary" id="cancelAddCust">Batal</button>
-                </form>
-            </div>
-
-            <!-- Tabel Tagihan -->
-            <div id="billsList" class="hidden">
-                <h3>Daftar Tagihan</h3>
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>ID Pelanggan</th>
-                            <th>Nama Pelanggan</th>
-                            <th>Total</th>
-                            <th>Status</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="billsTableBody">
-                        <!-- Isi tabel akan diisi oleh JS -->
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Form Tambah Tagihan -->
-            <div id="addBillForm" class="hidden">
-                <h3>Tambah Tagihan Baru</h3>
-                <form id="billForm">
-                    <div class="mb-3">
-                        <label for="billCustomerId" class="form-label">ID Pelanggan</label>
-                        <input type="text" class="form-control" id="billCustomerId" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="billAmount" class="form-label">Jumlah (Rp)</label>
-                        <input type="number" class="form-control" id="billAmount" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="billStatus" class="form-label">Status</label>
-                        <select class="form-select" id="billStatus" required>
-                            <option value="belum_dibayar">Belum Dibayar</option>
-                            <option value="dibayar">Dibayar</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-success">Simpan</button>
-                    <button type="button" class="btn btn-secondary" id="cancelAddBill">Batal</button>
-                </form>
+                </div>
             </div>
         </div>
 
@@ -282,6 +381,7 @@
                             <th>ID Tagihan</th>
                             <th>Total</th>
                             <th>Status</th>
+                            <th>Metode</th>
                             <th>Aksi</th>
                         </tr>
                     </thead>
@@ -422,6 +522,9 @@
             const viewMyBillsBtn = document.getElementById('viewMyBillsBtn');
             const searchCustomer = document.getElementById('searchCustomer');
             const searchLead = document.getElementById('searchLead');
+            const backToBillsBtn = document.getElementById('backToBillsBtn');
+            const navOverview = document.getElementById('navOverview');
+            const navMonitoring = document.getElementById('navMonitoring');
 
             // Fungsi untuk cek apakah sudah ada admin
             async function checkIfAdminExists() {
@@ -475,7 +578,6 @@
             async function saveLead(id, name, email, address, plan, status) {
                 try {
                     if (id) {
-                        // Update
                         await db.collection("leads").doc(id).update({
                             nama: name,
                             email: email,
@@ -485,7 +587,6 @@
                         });
                         alert('Calon pelanggan berhasil diperbarui.');
                     } else {
-                        // Create
                         await db.collection("leads").add({
                             nama: name,
                             email: email,
@@ -498,7 +599,7 @@
                     return true;
                 } catch (error) {
                     console.error("Error menyimpan calon pelanggan: ", error);
-                    alert('Gagal menyimpan data: ' + error.message);
+                    alert('Gagal menyimpan  ' + error.message);
                     return false;
                 }
             }
@@ -615,9 +716,13 @@
                         row.insertCell(0).textContent = data.customerId;
                         row.insertCell(1).textContent = data.customerName || 'N/A';
                         row.insertCell(2).textContent = `Rp ${data.amount}`;
-                        row.insertCell(3).textContent = data.status === 'dibayar' ? 'Lunas' : 'Belum Dibayar';
-                        const actions = row.insertCell(4);
-                        actions.innerHTML = `<button class="btn btn-sm btn-warning" onclick="updateBillStatus('${doc.id}', '${data.status === 'dibayar' ? 'belum_dibayar' : 'dibayar'}')">Ubah Status</button>`;
+                        row.insertCell(3).textContent = data.status === 'dibayar' ? 'Lunas' : (data.status === 'dikonfirmasi' ? 'Dikonfirmasi' : 'Belum Dibayar');
+                        row.insertCell(4).textContent = data.paymentMethod === 'qris' ? 'QRIS' : 'No. Rekening';
+                        const actions = row.insertCell(5);
+                        actions.innerHTML = `
+                            <button class="btn btn-sm btn-info me-1" onclick="viewBillDetail('${doc.id}')">Detail</button>
+                            <button class="btn btn-sm btn-warning" onclick="updateBillStatus('${doc.id}', '${data.status === 'dibayar' ? 'belum_dibayar' : 'dibayar'}')">Ubah Status</button>
+                        `;
                     });
                 });
             }
@@ -633,14 +738,49 @@
                         const row = tbody.insertRow();
                         row.insertCell(0).textContent = doc.id;
                         row.insertCell(1).textContent = `Rp ${data.amount}`;
-                        row.insertCell(2).textContent = data.status === 'dibayar' ? 'Lunas' : 'Belum Dibayar';
-                        const actions = row.insertCell(3);
+                        row.insertCell(2).textContent = data.status === 'dibayar' ? 'Lunas' : (data.status === 'dikonfirmasi' ? 'Dikonfirmasi' : 'Belum Dibayar');
+                        row.insertCell(3).textContent = data.paymentMethod === 'qris' ? 'QRIS' : 'No. Rekening';
+                        const actions = row.insertCell(4);
                         if (data.status === 'belum_dibayar') {
                             actions.innerHTML = `<button class="btn btn-sm btn-success" onclick="simulatePayment('${doc.id}')">Bayar</button>`;
                         } else {
                             actions.innerHTML = '<span class="text-success">Lunas</span>';
                         }
                     });
+                });
+            }
+
+            // Fungsi untuk menampilkan detail tagihan
+            function viewBillDetail(id) {
+                db.collection("tagihan").doc(id).get().then((doc) => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        document.getElementById('detailId').textContent = doc.id;
+                        document.getElementById('detailCustomerName').textContent = data.customerName || 'N/A';
+                        document.getElementById('detailCustomerId').textContent = data.customerId;
+                        document.getElementById('detailAmount').textContent = data.amount;
+                        document.getElementById('detailStatus').textContent = data.status === 'dibayar' ? 'Lunas' : (data.status === 'dikonfirmasi' ? 'Dikonfirmasi' : 'Belum Dibayar');
+                        document.getElementById('detailMethod').textContent = data.paymentMethod === 'qris' ? 'QRIS' : 'No. Rekening';
+                        document.getElementById('detailInfo').textContent = data.paymentInfo;
+
+                        // Tampilkan QRIS atau No. Rekening
+                        if (data.paymentMethod === 'qris') {
+                            document.getElementById('qrisContainer').style.display = 'block';
+                            document.getElementById('norekContainer').style.display = 'none';
+                            const qr = new QRious({
+                                element: document.getElementById('qrisCanvas'),
+                                value: data.paymentInfo,
+                                size: 200
+                            });
+                        } else {
+                            document.getElementById('qrisContainer').style.display = 'none';
+                            document.getElementById('norekContainer').style.display = 'block';
+                            document.getElementById('norekValue').textContent = data.paymentInfo;
+                        }
+
+                        document.getElementById('adminDashboard').classList.add('hidden');
+                        document.getElementById('billDetail').classList.remove('hidden');
+                    }
                 });
             }
 
@@ -700,6 +840,57 @@
                 }
             }
 
+            // Fungsi Monitoring
+            function loadMonitoringData() {
+                // Simulasi data pendapatan bulanan
+                const ctx = document.getElementById('revenueChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
+                        datasets: [{
+                            label: 'Pendapatan (Rp)',
+                            data: [15000000, 18000000, 22000000, 25000000, 20000000, 28000000, 30000000, 27000000, 32000000, 35000000, 38000000, 40000000],
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Pendapatan Bulanan Tahun Ini'
+                            }
+                        }
+                    }
+                });
+
+                // Simulasi status layanan
+                document.getElementById('uptimeValue').textContent = '99.9%';
+                document.getElementById('statusValue').textContent = 'Stabil';
+                document.getElementById('statusValue').className = 'text-success';
+                document.getElementById('devicesActive').textContent = '15/16';
+                document.getElementById('latencyValue').textContent = '12 ms';
+
+                // Simulasi log aktivitas
+                const logBody = document.getElementById('activityLogBody');
+                logBody.innerHTML = '';
+                const logs = [
+                    { time: '2025-11-10 10:00:00', user: 'admin@jaganetwork.com', action: 'Tambah Tagihan', desc: 'Tagihan 300k untuk pelanggan Budi' },
+                    { time: '2025-11-10 09:45:00', user: 'admin@jaganetwork.com', action: 'Login', desc: 'Masuk ke sistem' },
+                    { time: '2025-11-09 16:30:00', user: 'admin@jaganetwork.com', action: 'Tambah Pelanggan', desc: 'Pelanggan baru: Siti' },
+                ];
+                logs.forEach(log => {
+                    const row = logBody.insertRow();
+                    row.insertCell(0).textContent = log.time;
+                    row.insertCell(1).textContent = log.user;
+                    row.insertCell(2).textContent = log.action;
+                    row.insertCell(3).textContent = log.desc;
+                });
+            }
+
             // Event Listener
             loginBtn.addEventListener('click', () => {
                 loginModal.show();
@@ -742,6 +933,24 @@
                     registerBtn.style.display = 'inline';
                     userGreeting.textContent = 'Halo!';
                 });
+            });
+
+            // Tab Navigation
+            navOverview.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.getElementById('overviewTab').classList.remove('hidden');
+                document.getElementById('monitoringTab').classList.add('hidden');
+                navOverview.classList.add('active');
+                navMonitoring.classList.remove('active');
+            });
+
+            navMonitoring.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.getElementById('monitoringTab').classList.remove('hidden');
+                document.getElementById('overviewTab').classList.add('hidden');
+                navMonitoring.classList.add('active');
+                navOverview.classList.remove('active');
+                loadMonitoringData(); // Load data saat tab monitoring dibuka
             });
 
             // Form Register Admin
@@ -792,6 +1001,7 @@
                                         document.getElementById('addCustomerForm').classList.add('hidden');
                                         document.getElementById('addLeadForm').classList.add('hidden');
                                         document.getElementById('addBillForm').classList.add('hidden');
+                                        document.getElementById('billDetail').classList.add('hidden');
                                         loadCustomers();
                                     });
                                     viewLeadsBtn.addEventListener('click', () => {
@@ -801,6 +1011,7 @@
                                         document.getElementById('addCustomerForm').classList.add('hidden');
                                         document.getElementById('addLeadForm').classList.add('hidden');
                                         document.getElementById('addBillForm').classList.add('hidden');
+                                        document.getElementById('billDetail').classList.add('hidden');
                                         loadLeads();
                                     });
                                     viewBillsBtn.addEventListener('click', () => {
@@ -810,6 +1021,7 @@
                                         document.getElementById('addCustomerForm').classList.add('hidden');
                                         document.getElementById('addLeadForm').classList.add('hidden');
                                         document.getElementById('addBillForm').classList.add('hidden');
+                                        document.getElementById('billDetail').classList.add('hidden');
                                         loadBills();
                                     });
                                     addCustomerBtn.addEventListener('click', () => {
@@ -819,6 +1031,7 @@
                                         document.getElementById('billsList').classList.add('hidden');
                                         document.getElementById('addLeadForm').classList.add('hidden');
                                         document.getElementById('addBillForm').classList.add('hidden');
+                                        document.getElementById('billDetail').classList.add('hidden');
                                     });
                                     addLeadBtn.addEventListener('click', () => {
                                         document.getElementById('addLeadForm').classList.remove('hidden');
@@ -829,6 +1042,7 @@
                                         document.getElementById('billsList').classList.add('hidden');
                                         document.getElementById('addCustomerForm').classList.add('hidden');
                                         document.getElementById('addBillForm').classList.add('hidden');
+                                        document.getElementById('billDetail').classList.add('hidden');
                                     });
                                     cancelAddCust.addEventListener('click', () => {
                                         document.getElementById('addCustomerForm').classList.add('hidden');
@@ -843,6 +1057,10 @@
                                         document.getElementById('addBillForm').classList.add('hidden');
                                         document.getElementById('billsList').classList.remove('hidden');
                                     });
+                                    backToBillsBtn.addEventListener('click', () => {
+                                        document.getElementById('billDetail').classList.add('hidden');
+                                        document.getElementById('billsList').classList.remove('hidden');
+                                    });
                                     customerForm.addEventListener('submit', async (e) => {
                                         e.preventDefault();
                                         const name = document.getElementById('custName').value;
@@ -855,7 +1073,7 @@
                                         const success = await createCustomerAccount(email, password, name, address, plan, status);
                                         if (success) {
                                             document.getElementById('customerForm').reset();
-                                            loadCustomers(); // Refresh tabel
+                                            loadCustomers();
                                             document.getElementById('addCustomerForm').classList.add('hidden');
                                             document.getElementById('customersList').classList.remove('hidden');
                                         }
@@ -883,6 +1101,8 @@
                                         const customerId = document.getElementById('billCustomerId').value;
                                         const amount = document.getElementById('billAmount').value;
                                         const status = document.getElementById('billStatus').value;
+                                        const method = document.getElementById('billPaymentMethod').value;
+                                        const info = document.getElementById('billPaymentInfo').value;
 
                                         db.collection("pelanggan").doc(customerId).get().then((doc) => {
                                             const customerName = doc.exists ? doc.data().nama : 'N/A';
@@ -890,7 +1110,9 @@
                                                 customerId: customerId,
                                                 customerName: customerName,
                                                 amount: parseFloat(amount),
-                                                status: status
+                                                status: status,
+                                                paymentMethod: method,
+                                                paymentInfo: info
                                             }).then(() => {
                                                 alert('Tagihan baru berhasil ditambahkan.');
                                                 document.getElementById('billForm').reset();
@@ -912,6 +1134,7 @@
                                 } else if (role === 'customer') {
                                     viewMyBillsBtn.addEventListener('click', () => {
                                         document.getElementById('myBillsList').classList.remove('hidden');
+                                        document.getElementById('customersList').classList.add('hidden');
                                         loadMyBills();
                                     });
                                 }
