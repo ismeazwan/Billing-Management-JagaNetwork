@@ -137,7 +137,7 @@
                         <label for="custPlan" class="form-label">Plan</label>
                         <input type="text" class="form-control" id="custPlan" required>
                     </div>
-                    <button type="submit" class="btn btn-success">Simpan</button>
+                    <button type="submit" class="btn btn-success">Buat Akun Pelanggan</button>
                     <button type="button" class="btn btn-secondary" id="cancelAddCust">Batal</button>
                 </form>
             </div>
@@ -282,6 +282,35 @@
             const customerForm = document.getElementById('customerForm');
             const billForm = document.getElementById('billForm');
             const viewMyBillsBtn = document.getElementById('viewMyBillsBtn');
+
+            // Fungsi untuk membuat akun pelanggan baru di Auth dan Firestore
+            async function createCustomerAccount(email, password, name, address, plan) {
+                try {
+                    // 1. Buat akun di Firebase Auth
+                    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                    const uid = userCredential.user.uid;
+
+                    // 2. Buat dokumen di koleksi 'users' dengan role 'customer'
+                    await db.collection("users").doc(uid).set({
+                        role: "customer"
+                    });
+
+                    // 3. Buat dokumen di koleksi 'pelanggan'
+                    await db.collection("pelanggan").add({
+                        nama: name,
+                        email: email,
+                        alamat: address,
+                        plan: plan
+                    });
+
+                    alert('Akun pelanggan baru berhasil dibuat.');
+                    return true;
+                } catch (error) {
+                    console.error("Error membuat akun pelanggan: ", error);
+                    alert('Gagal membuat akun pelanggan: ' + error.message);
+                    return false;
+                }
+            }
 
             // Fungsi untuk memuat data dashboard
             function loadDashboardData(role) {
@@ -479,25 +508,21 @@
                                         document.getElementById('addBillForm').classList.add('hidden');
                                         document.getElementById('billsList').classList.remove('hidden');
                                     });
-                                    customerForm.addEventListener('submit', (e) => {
+                                    customerForm.addEventListener('submit', async (e) => {
                                         e.preventDefault();
                                         const name = document.getElementById('custName').value;
                                         const email = document.getElementById('custEmail').value;
                                         const address = document.getElementById('custAddress').value;
                                         const plan = document.getElementById('custPlan').value;
+                                        const password = "password123"; // Harusnya direset oleh pelanggan nanti
 
-                                        db.collection("pelanggan").add({
-                                            nama: name,
-                                            email: email,
-                                            alamat: address,
-                                            plan: plan
-                                        }).then(() => {
-                                            alert('Pelanggan baru berhasil ditambahkan.');
+                                        const success = await createCustomerAccount(email, password, name, address, plan);
+                                        if (success) {
                                             document.getElementById('customerForm').reset();
-                                            loadCustomers();
+                                            loadCustomers(); // Refresh tabel
                                             document.getElementById('addCustomerForm').classList.add('hidden');
                                             document.getElementById('customersList').classList.remove('hidden');
-                                        });
+                                        }
                                     });
                                     billForm.addEventListener('submit', (e) => {
                                         e.preventDefault();
@@ -529,7 +554,7 @@
                                     });
                                 }
                             } else {
-                                alert('Data pengguna tidak ditemukan.');
+                                alert('Data pengguna tidak ditemukan. Periksa koleksi "users" di Firestore.');
                             }
                         });
                     })
