@@ -57,6 +57,15 @@
                 <div class="col-md-3 mb-3">
                     <div class="card text-center">
                         <div class="card-body">
+                            <h5 class="card-title">Calon Pelanggan</h5>
+                            <p class="card-text" id="leadCount">0</p>
+                            <a href="#" class="btn btn-outline-warning" id="viewLeadsBtn">Lihat Daftar</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card text-center">
+                        <div class="card-body">
                             <h5 class="card-title">Tagihan</h5>
                             <p class="card-text" id="billingCount">0</p>
                             <a href="#" class="btn btn-outline-success" id="viewBillsBtn">Lihat Tagihan</a>
@@ -66,16 +75,11 @@
                 <div class="col-md-3 mb-3">
                     <div class="card text-center">
                         <div class="card-body">
-                            <h5 class="card-title">Tambah Pelanggan</h5>
-                            <a href="#" class="btn btn-outline-warning" id="addCustomerBtn">Buat Baru</a>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h5 class="card-title">Tambah Tagihan</h5>
-                            <a href="#" class="btn btn-outline-info" id="addBillBtn">Buat Baru</a>
+                            <h5 class="card-title">Tambah Data</h5>
+                            <div class="btn-group">
+                                <a href="#" class="btn btn-outline-warning btn-sm" id="addLeadBtn">Calon</a>
+                                <a href="#" class="btn btn-outline-success btn-sm" id="addCustomerBtn">Pelanggan</a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -84,6 +88,9 @@
             <!-- Tabel Pelanggan -->
             <div id="customersList" class="hidden">
                 <h3>Daftar Pelanggan</h3>
+                <div class="mb-3">
+                    <input type="text" id="searchCustomer" class="form-control" placeholder="Cari pelanggan...">
+                </div>
                 <table class="table table-striped">
                     <thead>
                         <tr>
@@ -91,6 +98,7 @@
                             <th>Email</th>
                             <th>Alamat</th>
                             <th>Plan</th>
+                            <th>Status</th>
                             <th>Aksi</th>
                         </tr>
                     </thead>
@@ -100,23 +108,62 @@
                 </table>
             </div>
 
-            <!-- Tabel Tagihan -->
-            <div id="billsList" class="hidden">
-                <h3>Daftar Tagihan</h3>
+            <!-- Tabel Calon Pelanggan -->
+            <div id="leadsList" class="hidden">
+                <h3>Daftar Calon Pelanggan</h3>
+                <div class="mb-3">
+                    <input type="text" id="searchLead" class="form-control" placeholder="Cari calon pelanggan...">
+                </div>
                 <table class="table table-striped">
                     <thead>
                         <tr>
-                            <th>ID Pelanggan</th>
-                            <th>Nama Pelanggan</th>
-                            <th>Total</th>
+                            <th>Nama</th>
+                            <th>Email</th>
+                            <th>Alamat</th>
+                            <th>Minat Plan</th>
                             <th>Status</th>
                             <th>Aksi</th>
                         </tr>
                     </thead>
-                    <tbody id="billsTableBody">
+                    <tbody id="leadsTableBody">
                         <!-- Isi tabel akan diisi oleh JS -->
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Form Tambah/Ubah Calon Pelanggan -->
+            <div id="addLeadForm" class="hidden">
+                <h3 id="leadFormTitle">Tambah Calon Pelanggan Baru</h3>
+                <form id="leadForm">
+                    <input type="hidden" id="leadId">
+                    <div class="mb-3">
+                        <label for="leadName" class="form-label">Nama</label>
+                        <input type="text" class="form-control" id="leadName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="leadEmail" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="leadEmail" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="leadAddress" class="form-label">Alamat</label>
+                        <input type="text" class="form-control" id="leadAddress" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="leadPlan" class="form-label">Minat Plan</label>
+                        <input type="text" class="form-control" id="leadPlan">
+                    </div>
+                    <div class="mb-3">
+                        <label for="leadStatus" class="form-label">Status</label>
+                        <select class="form-select" id="leadStatus">
+                            <option value="pending">Pending</option>
+                            <option value="contacted">Sudah Dihubungi</option>
+                            <option value="converted">Dikonversi ke Pelanggan</option>
+                            <option value="unresponsive">Tidak Merespon</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-success">Simpan</button>
+                    <button type="button" class="btn btn-secondary" id="cancelAddLead">Batal</button>
+                </form>
             </div>
 
             <!-- Form Tambah Pelanggan -->
@@ -139,9 +186,35 @@
                         <label for="custPlan" class="form-label">Plan</label>
                         <input type="text" class="form-control" id="custPlan" required>
                     </div>
+                    <div class="mb-3">
+                        <label for="custStatus" class="form-label">Status</label>
+                        <select class="form-select" id="custStatus">
+                            <option value="aktif">Aktif</option>
+                            <option value="non-aktif">Non-Aktif</option>
+                        </select>
+                    </div>
                     <button type="submit" class="btn btn-success">Buat Akun Pelanggan</button>
                     <button type="button" class="btn btn-secondary" id="cancelAddCust">Batal</button>
                 </form>
+            </div>
+
+            <!-- Tabel Tagihan -->
+            <div id="billsList" class="hidden">
+                <h3>Daftar Tagihan</h3>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID Pelanggan</th>
+                            <th>Nama Pelanggan</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="billsTableBody">
+                        <!-- Isi tabel akan diisi oleh JS -->
+                    </tbody>
+                </table>
             </div>
 
             <!-- Form Tambah Tagihan -->
@@ -336,14 +409,19 @@
             const registerRedirectBtn = document.getElementById('registerRedirectBtn');
             const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
             const viewCustomersBtn = document.getElementById('viewCustomersBtn');
+            const viewLeadsBtn = document.getElementById('viewLeadsBtn');
             const viewBillsBtn = document.getElementById('viewBillsBtn');
             const addCustomerBtn = document.getElementById('addCustomerBtn');
-            const addBillBtn = document.getElementById('addBillBtn');
+            const addLeadBtn = document.getElementById('addLeadBtn');
             const cancelAddCust = document.getElementById('cancelAddCust');
+            const cancelAddLead = document.getElementById('cancelAddLead');
             const cancelAddBill = document.getElementById('cancelAddBill');
             const customerForm = document.getElementById('customerForm');
+            const leadForm = document.getElementById('leadForm');
             const billForm = document.getElementById('billForm');
             const viewMyBillsBtn = document.getElementById('viewMyBillsBtn');
+            const searchCustomer = document.getElementById('searchCustomer');
+            const searchLead = document.getElementById('searchLead');
 
             // Fungsi untuk cek apakah sudah ada admin
             async function checkIfAdminExists() {
@@ -359,15 +437,9 @@
             // Fungsi untuk membuat akun admin baru di Auth dan Firestore
             async function createAdminAccount(email, password) {
                 try {
-                    // 1. Buat akun di Firebase Auth
                     const userCredential = await auth.createUserWithEmailAndPassword(email, password);
                     const uid = userCredential.user.uid;
-
-                    // 2. Buat dokumen di koleksi 'users' dengan role 'admin'
-                    await db.collection("users").doc(uid).set({
-                        role: "admin"
-                    });
-
+                    await db.collection("users").doc(uid).set({ role: "admin" });
                     alert('Akun admin baru berhasil dibuat.');
                     return true;
                 } catch (error) {
@@ -378,25 +450,18 @@
             }
 
             // Fungsi untuk membuat akun pelanggan baru di Auth dan Firestore
-            async function createCustomerAccount(email, password, name, address, plan) {
+            async function createCustomerAccount(email, password, name, address, plan, status) {
                 try {
-                    // 1. Buat akun di Firebase Auth
                     const userCredential = await auth.createUserWithEmailAndPassword(email, password);
                     const uid = userCredential.user.uid;
-
-                    // 2. Buat dokumen di koleksi 'users' dengan role 'customer'
-                    await db.collection("users").doc(uid).set({
-                        role: "customer"
-                    });
-
-                    // 3. Buat dokumen di koleksi 'pelanggan'
+                    await db.collection("users").doc(uid).set({ role: "customer" });
                     await db.collection("pelanggan").add({
                         nama: name,
                         email: email,
                         alamat: address,
-                        plan: plan
+                        plan: plan,
+                        status: status
                     });
-
                     alert('Akun pelanggan baru berhasil dibuat.');
                     return true;
                 } catch (error) {
@@ -406,7 +471,39 @@
                 }
             }
 
-            // Fungsi untuk logout otomatis setelah tidak aktif
+            // Fungsi untuk membuat/edit calon pelanggan
+            async function saveLead(id, name, email, address, plan, status) {
+                try {
+                    if (id) {
+                        // Update
+                        await db.collection("leads").doc(id).update({
+                            nama: name,
+                            email: email,
+                            alamat: address,
+                            plan: plan,
+                            status: status
+                        });
+                        alert('Calon pelanggan berhasil diperbarui.');
+                    } else {
+                        // Create
+                        await db.collection("leads").add({
+                            nama: name,
+                            email: email,
+                            alamat: address,
+                            plan: plan,
+                            status: status
+                        });
+                        alert('Calon pelanggan baru berhasil ditambahkan.');
+                    }
+                    return true;
+                } catch (error) {
+                    console.error("Error menyimpan calon pelanggan: ", error);
+                    alert('Gagal menyimpan data: ' + error.message);
+                    return false;
+                }
+            }
+
+            // Fungsi untuk logout otomatis
             let logoutTimer;
             function resetLogoutTimer() {
                 if (logoutTimer) clearTimeout(logoutTimer);
@@ -416,18 +513,20 @@
                         auth.signOut();
                         window.location.reload();
                     }
-                }, 30 * 60 * 1000); // 30 menit
+                }, 30 * 60 * 1000);
             }
-
             window.addEventListener('click', resetLogoutTimer);
             window.addEventListener('keydown', resetLogoutTimer);
-            resetLogoutTimer(); // Inisialisasi timer saat halaman dimuat
+            resetLogoutTimer();
 
             // Fungsi untuk memuat data dashboard
             function loadDashboardData(role) {
                 if (role === 'admin') {
                     db.collection("pelanggan").get().then((querySnapshot) => {
                         document.getElementById('customerCount').textContent = querySnapshot.size;
+                    });
+                    db.collection("leads").get().then((querySnapshot) => {
+                        document.getElementById('leadCount').textContent = querySnapshot.size;
                     });
                     db.collection("tagihan").get().then((querySnapshot) => {
                         document.getElementById('billingCount').textContent = querySnapshot.size;
@@ -457,10 +556,14 @@
             }
 
             // Fungsi untuk memuat data pelanggan
-            function loadCustomers() {
+            function loadCustomers(filter = "") {
                 const tbody = document.getElementById('customersTableBody');
                 tbody.innerHTML = '';
-                db.collection("pelanggan").get().then((querySnapshot) => {
+                let query = db.collection("pelanggan");
+                if (filter) {
+                    query = query.where("nama", ">=", filter).where("nama", "<=", filter + '\uf8ff');
+                }
+                query.get().then((querySnapshot) => {
                     querySnapshot.forEach((doc) => {
                         const data = doc.data();
                         const row = tbody.insertRow();
@@ -468,8 +571,35 @@
                         row.insertCell(1).textContent = data.email;
                         row.insertCell(2).textContent = data.alamat;
                         row.insertCell(3).textContent = data.plan;
-                        const actions = row.insertCell(4);
+                        row.insertCell(4).textContent = data.status || "aktif";
+                        const actions = row.insertCell(5);
                         actions.innerHTML = `<button class="btn btn-sm btn-danger" onclick="deleteCustomer('${doc.id}')">Hapus</button>`;
+                    });
+                });
+            }
+
+            // Fungsi untuk memuat data calon pelanggan
+            function loadLeads(filter = "") {
+                const tbody = document.getElementById('leadsTableBody');
+                tbody.innerHTML = '';
+                let query = db.collection("leads");
+                if (filter) {
+                    query = query.where("nama", ">=", filter).where("nama", "<=", filter + '\uf8ff');
+                }
+                query.get().then((querySnapshot) => {
+                    querySnapshot.forEach((doc) => {
+                        const data = doc.data();
+                        const row = tbody.insertRow();
+                        row.insertCell(0).textContent = data.nama;
+                        row.insertCell(1).textContent = data.email;
+                        row.insertCell(2).textContent = data.alamat;
+                        row.insertCell(3).textContent = data.plan || "N/A";
+                        row.insertCell(4).textContent = data.status;
+                        const actions = row.insertCell(5);
+                        actions.innerHTML = `
+                            <button class="btn btn-sm btn-warning me-1" onclick="editLead('${doc.id}')">Edit</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteLead('${doc.id}')">Hapus</button>
+                        `;
                     });
                 });
             }
@@ -522,6 +652,32 @@
                         loadCustomers();
                     });
                 }
+            }
+
+            function deleteLead(id) {
+                if (confirm('Yakin ingin menghapus calon pelanggan ini?')) {
+                    db.collection("leads").doc(id).delete().then(() => {
+                        alert('Calon pelanggan berhasil dihapus.');
+                        loadLeads();
+                    });
+                }
+            }
+
+            function editLead(id) {
+                db.collection("leads").doc(id).get().then((doc) => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        document.getElementById('leadId').value = id;
+                        document.getElementById('leadName').value = data.nama;
+                        document.getElementById('leadEmail').value = data.email;
+                        document.getElementById('leadAddress').value = data.alamat;
+                        document.getElementById('leadPlan').value = data.plan || "";
+                        document.getElementById('leadStatus').value = data.status;
+                        document.getElementById('leadFormTitle').textContent = 'Edit Calon Pelanggan';
+                        document.getElementById('addLeadForm').classList.remove('hidden');
+                        document.getElementById('leadsList').classList.add('hidden');
+                    }
+                });
             }
 
             function updateBillStatus(id, newStatus) {
@@ -622,7 +778,6 @@
                         registerBtn.style.display = 'none';
                         userGreeting.textContent = `Halo, ${email}`;
 
-                        // Ambil role dari dokumen users
                         db.collection("users").doc(userCredential.user.uid).get().then((doc) => {
                             if (doc.exists) {
                                 const role = doc.data().role;
@@ -632,33 +787,57 @@
                                 if (role === 'admin') {
                                     viewCustomersBtn.addEventListener('click', () => {
                                         document.getElementById('customersList').classList.remove('hidden');
+                                        document.getElementById('leadsList').classList.add('hidden');
                                         document.getElementById('billsList').classList.add('hidden');
                                         document.getElementById('addCustomerForm').classList.add('hidden');
+                                        document.getElementById('addLeadForm').classList.add('hidden');
                                         document.getElementById('addBillForm').classList.add('hidden');
                                         loadCustomers();
+                                    });
+                                    viewLeadsBtn.addEventListener('click', () => {
+                                        document.getElementById('leadsList').classList.remove('hidden');
+                                        document.getElementById('customersList').classList.add('hidden');
+                                        document.getElementById('billsList').classList.add('hidden');
+                                        document.getElementById('addCustomerForm').classList.add('hidden');
+                                        document.getElementById('addLeadForm').classList.add('hidden');
+                                        document.getElementById('addBillForm').classList.add('hidden');
+                                        loadLeads();
                                     });
                                     viewBillsBtn.addEventListener('click', () => {
                                         document.getElementById('billsList').classList.remove('hidden');
                                         document.getElementById('customersList').classList.add('hidden');
+                                        document.getElementById('leadsList').classList.add('hidden');
                                         document.getElementById('addCustomerForm').classList.add('hidden');
+                                        document.getElementById('addLeadForm').classList.add('hidden');
                                         document.getElementById('addBillForm').classList.add('hidden');
                                         loadBills();
                                     });
                                     addCustomerBtn.addEventListener('click', () => {
                                         document.getElementById('addCustomerForm').classList.remove('hidden');
                                         document.getElementById('customersList').classList.add('hidden');
+                                        document.getElementById('leadsList').classList.add('hidden');
                                         document.getElementById('billsList').classList.add('hidden');
+                                        document.getElementById('addLeadForm').classList.add('hidden');
                                         document.getElementById('addBillForm').classList.add('hidden');
                                     });
-                                    addBillBtn.addEventListener('click', () => {
-                                        document.getElementById('addBillForm').classList.remove('hidden');
+                                    addLeadBtn.addEventListener('click', () => {
+                                        document.getElementById('addLeadForm').classList.remove('hidden');
+                                        document.getElementById('leadFormTitle').textContent = 'Tambah Calon Pelanggan Baru';
+                                        document.getElementById('leadForm').reset();
+                                        document.getElementById('leadsList').classList.add('hidden');
                                         document.getElementById('customersList').classList.add('hidden');
                                         document.getElementById('billsList').classList.add('hidden');
                                         document.getElementById('addCustomerForm').classList.add('hidden');
+                                        document.getElementById('addBillForm').classList.add('hidden');
                                     });
                                     cancelAddCust.addEventListener('click', () => {
                                         document.getElementById('addCustomerForm').classList.add('hidden');
                                         document.getElementById('customersList').classList.remove('hidden');
+                                    });
+                                    cancelAddLead.addEventListener('click', () => {
+                                        document.getElementById('addLeadForm').classList.add('hidden');
+                                        document.getElementById('leadsList').classList.remove('hidden');
+                                        document.getElementById('leadForm').reset();
                                     });
                                     cancelAddBill.addEventListener('click', () => {
                                         document.getElementById('addBillForm').classList.add('hidden');
@@ -670,14 +849,33 @@
                                         const email = document.getElementById('custEmail').value;
                                         const address = document.getElementById('custAddress').value;
                                         const plan = document.getElementById('custPlan').value;
-                                        const password = "password123"; // Harusnya direset oleh pelanggan nanti
+                                        const status = document.getElementById('custStatus').value;
+                                        const password = "password123";
 
-                                        const success = await createCustomerAccount(email, password, name, address, plan);
+                                        const success = await createCustomerAccount(email, password, name, address, plan, status);
                                         if (success) {
                                             document.getElementById('customerForm').reset();
                                             loadCustomers(); // Refresh tabel
                                             document.getElementById('addCustomerForm').classList.add('hidden');
                                             document.getElementById('customersList').classList.remove('hidden');
+                                        }
+                                    });
+                                    leadForm.addEventListener('submit', async (e) => {
+                                        e.preventDefault();
+                                        const id = document.getElementById('leadId').value;
+                                        const name = document.getElementById('leadName').value;
+                                        const email = document.getElementById('leadEmail').value;
+                                        const address = document.getElementById('leadAddress').value;
+                                        const plan = document.getElementById('leadPlan').value;
+                                        const status = document.getElementById('leadStatus').value;
+
+                                        const success = await saveLead(id, name, email, address, plan, status);
+                                        if (success) {
+                                            document.getElementById('leadForm').reset();
+                                            document.getElementById('leadId').value = '';
+                                            loadLeads();
+                                            document.getElementById('addLeadForm').classList.add('hidden');
+                                            document.getElementById('leadsList').classList.remove('hidden');
                                         }
                                     });
                                     billForm.addEventListener('submit', (e) => {
@@ -686,7 +884,6 @@
                                         const amount = document.getElementById('billAmount').value;
                                         const status = document.getElementById('billStatus').value;
 
-                                        // Ambil nama pelanggan dari ID
                                         db.collection("pelanggan").doc(customerId).get().then((doc) => {
                                             const customerName = doc.exists ? doc.data().nama : 'N/A';
                                             db.collection("tagihan").add({
@@ -703,6 +900,15 @@
                                             });
                                         });
                                     });
+
+                                    // Pencarian
+                                    searchCustomer.addEventListener('input', (e) => {
+                                        loadCustomers(e.target.value);
+                                    });
+                                    searchLead.addEventListener('input', (e) => {
+                                        loadLeads(e.target.value);
+                                    });
+
                                 } else if (role === 'customer') {
                                     viewMyBillsBtn.addEventListener('click', () => {
                                         document.getElementById('myBillsList').classList.remove('hidden');
